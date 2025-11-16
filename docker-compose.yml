@@ -1,0 +1,15 @@
+services:
+  locatedb:
+    image: postgres:latest
+    container_name: lbs_locatedb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: locatedb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "55432:5432"
+    volumes:
+      - locatedb_data:/var/lib/postgresql/data
+volumes:
+  locatedb_data:
