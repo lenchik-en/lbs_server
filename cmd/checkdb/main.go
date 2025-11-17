@@ -21,6 +21,7 @@ func main() {
 		log.Fatalf("DB_DSN is not set in .env")
 	}
 
+	fmt.Println(dsn)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatalf("failed to open: %v", err)
