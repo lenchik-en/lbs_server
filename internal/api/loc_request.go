@@ -1,11 +1,18 @@
 package api
 
+const (
+	Gsm   = "gsm"
+	Wcdma = "wcdma"
+	Lte   = "lte"
+)
+
 type LocateRequest struct {
 	Cell []Cell `json:"cell"`
 	Wifi []Wifi `json:"wifi"`
 }
 
 type Cell struct {
+	Tech  string
 	GSM   *GSM   `json:"gsm"`
 	WCDMA *WCDMA `json:"wcdma"`
 	LTE   *LTE   `json:"lte"`
