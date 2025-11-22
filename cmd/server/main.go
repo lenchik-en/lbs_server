@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	godotenv.Load("../../.env")
+	godotenv.Load(".env")
 
 	dsn := os.Getenv("DB_DSN")
 	if dsn == "" {

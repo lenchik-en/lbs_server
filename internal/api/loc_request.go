@@ -9,6 +9,7 @@ const (
 type LocateRequest struct {
 	Cell []Cell `json:"cell"`
 	Wifi []Wifi `json:"wifi"`
+	//TODO: []ip
 }
 
 type Cell struct {

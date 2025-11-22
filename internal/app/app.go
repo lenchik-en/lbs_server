@@ -31,6 +31,29 @@ func HandleLocate(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]interface{}{
 		"debuq": req,
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func HandleLocateOpenCell(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req api.OpenCellRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := api.Query(req)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error from OpenCellID: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
@@ -40,10 +63,11 @@ func Run(db *db.LocateDB) {
 
 	http.HandleFunc("/locate", HandleLocate)
 
+	http.HandleFunc("/locate/test", HandleLocateOpenCell)
+
 	fmt.Println("Server listening on :8080...")
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("failed to start server: %v", err)
 	}
-
 }

@@ -36,11 +36,10 @@ func FindCell(ctx context.Context, db *sql.DB, c *api.Cell) (*Location, error) {
 	`
 
 	args := []interface{}{c.Tech}
-	switch c.Tech {
-	case :
-
-	}
-
+	//switch c.Tech {
+	//case :
+	//
+	//}
 
 	//
 	//
