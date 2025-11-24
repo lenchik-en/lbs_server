@@ -7,6 +7,7 @@ const (
 )
 
 type LocateRequest struct {
+	// TODO: token
 	Cell []Cell `json:"cell"`
 	Wifi []Wifi `json:"wifi"`
 	//TODO: []ip
@@ -59,4 +60,12 @@ type Wifi struct {
 	SignalStrength int `json:"signal_strength"`
 	CHANNEL        int `json:"channel"`
 	AGE            int `json:"age"`
+}
+
+type LocationResponse struct {
+	Point struct {
+		Lat float64
+		Lon float64
+	}
+	Accuracy int
 }

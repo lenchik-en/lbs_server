@@ -8,24 +8,22 @@ import (
 )
 
 type Location struct {
-	Point    Point
+	Point struct {
+		Lat float64
+		Lon float64
+	}
 	Accuracy int
 }
 
-type Point struct {
-	Lat float64
-	Lon float64
-}
-
-func NewLocation(lat, lac float64, acc int) *Location {
-	return &Location{
-		Point: Point{
-			Lat: lat,
-			Lon: lac,
-		},
-		Accuracy: acc,
-	}
-}
+//func NewLocation(lat, lac float64, acc int) *Location {
+//	return &Location{
+//		Point{
+//			Lat: lat,
+//			Lon: lac,
+//		},
+//		Accuracy: acc,
+//	}
+//}
 
 func FindCell(ctx context.Context, db *sql.DB, c *api.Cell) (*Location, error) {
 

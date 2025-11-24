@@ -27,13 +27,19 @@ func HandleLocate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
+	fmt.Println("Convert to OpenCellID...")
 
-	resp := map[string]interface{}{
-		"debuq": req,
+	openCellRequest := api.ConvertLocateToOpenCell(req)
+
+	openCellResp, err := api.Query(openCellRequest)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error from OpenCellID: %v", err), http.StatusInternalServerError)
+		return
 	}
 
+	loc := api.ConvertOpenCellToLocation(openCellResp)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(loc)
 }
 
 func HandleLocateOpenCell(w http.ResponseWriter, r *http.Request) {
