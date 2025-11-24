@@ -30,14 +30,26 @@ func HandleLocate(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Convert to OpenCellID...")
 
 	openCellRequest := api.ConvertLocateToOpenCell(req)
+	var best *api.OpenCellResponse
 
-	openCellResp, err := api.Query(openCellRequest)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error from OpenCellID: %v", err), http.StatusInternalServerError)
+	for _, r := range openCellRequest {
+		resp, err := api.Query(r)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error from OpenCellID: %v", err), http.StatusInternalServerError)
+			continue
+		}
+		if resp.Status == "ok" {
+			best = resp
+			break
+		}
+	}
+
+	if best == nil {
+		http.Error(w, "Location not found", http.StatusNotFound)
 		return
 	}
 
-	loc := api.ConvertOpenCellToLocation(openCellResp)
+	loc := api.ConvertOpenCellToLocation(best)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(loc)
 }

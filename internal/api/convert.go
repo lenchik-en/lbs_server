@@ -4,28 +4,36 @@ import (
 	"os"
 )
 
-func ConvertLocateToOpenCell(req LocateRequest) OpenCellRequest {
-	ocReq := OpenCellRequest{
-		Token:   os.Getenv("OPENCELL_API_KEY"),
-		Address: 0,
-	}
+func ConvertLocateToOpenCell(req LocateRequest) []OpenCellRequest {
+	apiKey := os.Getenv("OPENCELL_API_KEY")
+
+	var (
+		gsmReq   OpenCellRequest
+		wcdmaReq OpenCellRequest
+		lteReq   OpenCellRequest
+		results  []OpenCellRequest
+	)
+
+	gsmReq.Token = apiKey
+	wcdmaReq.Token = apiKey
+	lteReq.Token = apiKey
 
 	for _, c := range req.Cell {
 		if c.GSM != nil {
-			ocReq.Radio = Gsm
-			ocReq.Mcc = c.GSM.MCC
-			ocReq.Mnc = c.GSM.MNC
-			ocReq.Cells = append(ocReq.Cells, struct {
+			gsmReq.Radio = Gsm
+			gsmReq.Mcc = c.GSM.MCC
+			gsmReq.Mnc = c.GSM.MNC
+			gsmReq.Cells = append(gsmReq.Cells, struct {
 				Lac int `json:"lac"`
 				Cid int `json:"cid"`
 				Psc int `json:"psc"`
 			}{Lac: c.GSM.LAC, Cid: c.GSM.CID, Psc: 0})
 		}
 		if c.WCDMA != nil {
-			ocReq.Radio = Wcdma
-			ocReq.Mcc = c.WCDMA.MCC
-			ocReq.Mnc = c.WCDMA.MNC
-			ocReq.Cells = append(ocReq.Cells, struct {
+			wcdmaReq.Radio = Wcdma
+			wcdmaReq.Mcc = c.WCDMA.MCC
+			wcdmaReq.Mnc = c.WCDMA.MNC
+			wcdmaReq.Cells = append(wcdmaReq.Cells, struct {
 				Lac int `json:"lac"`
 				Cid int `json:"cid"`
 				Psc int `json:"psc"`
@@ -33,10 +41,10 @@ func ConvertLocateToOpenCell(req LocateRequest) OpenCellRequest {
 		}
 
 		if c.LTE != nil {
-			ocReq.Radio = Lte
-			ocReq.Mcc = c.LTE.MCC
-			ocReq.Mnc = c.LTE.MNC
-			ocReq.Cells = append(ocReq.Cells, struct {
+			lteReq.Radio = Lte
+			lteReq.Mcc = c.LTE.MCC
+			lteReq.Mnc = c.LTE.MNC
+			lteReq.Cells = append(lteReq.Cells, struct {
 				Lac int `json:"lac"`
 				Cid int `json:"cid"`
 				Psc int `json:"psc"`
@@ -44,7 +52,17 @@ func ConvertLocateToOpenCell(req LocateRequest) OpenCellRequest {
 		}
 	}
 
-	return ocReq
+	if len(lteReq.Cells) > 0 {
+		results = append(results, lteReq)
+	}
+	if len(wcdmaReq.Cells) > 0 {
+		results = append(results, wcdmaReq)
+	}
+	if len(gsmReq.Cells) > 0 {
+		results = append(results, gsmReq)
+	}
+
+	return results
 }
 
 func ConvertOpenCellToLocation(resp *OpenCellResponse) LocationResponse {
