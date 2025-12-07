@@ -1,6 +1,7 @@
 package app
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,13 +12,18 @@ import (
 	"github.com/lenchik-en/lbs_server/internal/db"
 )
 
-func HandleHealth(w http.ResponseWriter, r *http.Request) {
+type App struct {
+	DB     *sql.DB
+	Logger *db.Logger
+}
+
+func (a *App) HandleHealth(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]string{"status": "ok"}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
 
-func HandleLocate(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -34,6 +40,10 @@ func HandleLocate(w http.ResponseWriter, r *http.Request) {
 		req.SessionUUID = uuid.New().String()
 	}
 	log.Printf("SessionUUID: %s", req.SessionUUID)
+
+	logger := a.Logger
+
+	_ = logger.CreateSessionIfNotExists(r.Context(), req.SessionUUID)
 
 	log.Printf("Convert to OpenCellID...")
 	openCellRequest := api.ConvertLocateToOpenCell(req)
@@ -56,6 +66,8 @@ func HandleLocate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_ = logger.SavePoint(r.Context(), req.SessionUUID, best.Lat, best.Lon, best.Accuracy, "opencell", req, best)
+
 	loc := api.ConvertOpenCellToLocation(best)
 
 	out := map[string]any{
@@ -66,7 +78,7 @@ func HandleLocate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(out)
 }
 
-func HandleLocateOpenCell(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleLocateOpenCell(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -88,12 +100,16 @@ func HandleLocateOpenCell(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-func Run(db *db.LocateDB) {
-	http.HandleFunc("/healthz", HandleHealth)
+func Run(dab *db.LocateDB) {
+	app := &App{
+		DB:     dab.DB,
+		Logger: db.NewLogger(dab.DB),
+	}
+	http.HandleFunc("/healthz", app.HandleHealth)
 
-	http.HandleFunc("/locate", HandleLocate)
+	http.HandleFunc("/locate", app.HandleLocate)
 
-	http.HandleFunc("/locate/test", HandleLocateOpenCell)
+	http.HandleFunc("/locate/test", app.HandleLocateOpenCell)
 
 	fmt.Println("Server listening on :8080...")
 

@@ -66,12 +66,3 @@ CREATE TABLE IF NOT EXISTS ip
     id      SERIAL PRIMARY KEY,
     address VARCHAR(17) --IPv4 или IPv6 адрес устройства
 );
-
-CREATE TABLE IF NOT EXISTS sessions
-(
-    session_uuid uuid,
-    timestamp    TIMESTAMP,
-    lat          FLOAT,
-    lon          FLOAT,
-    accuracy     INT
-);
