@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/lenchik-en/lbs_server/internal/api"
 	"github.com/lenchik-en/lbs_server/internal/db"
 )
@@ -27,11 +28,17 @@ func HandleLocate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
-	fmt.Println("Convert to OpenCellID...")
 
+	//TODO: уточнить нужно ли присваивать, если не получен от клиента
+	if req.SessionUUID == "" {
+		req.SessionUUID = uuid.New().String()
+	}
+	log.Printf("SessionUUID: %s", req.SessionUUID)
+
+	log.Printf("Convert to OpenCellID...")
 	openCellRequest := api.ConvertLocateToOpenCell(req)
-	var best *api.OpenCellResponse
 
+	var best *api.OpenCellResponse
 	for _, r := range openCellRequest {
 		resp, err := api.Query(r)
 		if err != nil {
@@ -50,8 +57,13 @@ func HandleLocate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	loc := api.ConvertOpenCellToLocation(best)
+
+	out := map[string]any{
+		"sessionUUID": req.SessionUUID,
+		"location":    loc,
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(loc)
+	json.NewEncoder(w).Encode(out)
 }
 
 func HandleLocateOpenCell(w http.ResponseWriter, r *http.Request) {

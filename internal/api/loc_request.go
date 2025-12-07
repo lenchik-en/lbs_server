@@ -7,9 +7,9 @@ const (
 )
 
 type LocateRequest struct {
-	// TODO: token
-	Cell []Cell `json:"cell"`
-	Wifi []Wifi `json:"wifi"`
+	SessionUUID string `json:"sessionUUID"`
+	Cell        []Cell `json:"cell"`
+	Wifi        []Wifi `json:"wifi"`
 	//TODO: []ip
 }
 
