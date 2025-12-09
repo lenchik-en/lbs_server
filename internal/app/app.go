@@ -24,6 +24,7 @@ func (a *App) HandleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Get POST /locate request from Client %s", r.RemoteAddr)
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -43,7 +44,11 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 
 	logger := a.Logger
 
-	_ = logger.CreateSessionIfNotExists(r.Context(), req.SessionUUID)
+	err := logger.CreateSessionIfNotExists(r.Context(), req.SessionUUID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to add sessionUUID to the database: %v", err), http.StatusInternalServerError)
+		//return
+	}
 
 	log.Printf("Convert to OpenCellID...")
 	openCellRequest := api.ConvertLocateToOpenCell(req)
@@ -76,6 +81,7 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(out)
+	log.Printf("POST /locate for Client %s is done", r.RemoteAddr)
 }
 
 func (a *App) HandleLocateOpenCell(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +115,7 @@ func Run(dab *db.LocateDB) {
 
 	http.HandleFunc("/locate", app.HandleLocate)
 
-	http.HandleFunc("/locate/test", app.HandleLocateOpenCell)
+	http.HandleFunc("/locate/opencell", app.HandleLocateOpenCell)
 
 	fmt.Println("Server listening on :8080...")
 

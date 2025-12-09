@@ -10,7 +10,7 @@ type LocateRequest struct {
 	SessionUUID string `json:"sessionUUID"`
 	Cell        []Cell `json:"cell"`
 	Wifi        []Wifi `json:"wifi"`
-	//TODO: []ip
+	IP          []Ip   `json:"ip"`
 }
 
 type Cell struct {
@@ -60,6 +60,10 @@ type Wifi struct {
 	SignalStrength int `json:"signal_strength"`
 	CHANNEL        int `json:"channel"`
 	AGE            int `json:"age"`
+}
+
+type Ip struct {
+	Address string `json:"address"`
 }
 
 type LocationResponse struct {
