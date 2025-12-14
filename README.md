@@ -110,6 +110,16 @@ OPENCELL_URL=https://eu1.unwiredlabs.com/v2/process.php
 OPENCELL_API_KEY=your_api_key
 ```
 
+Миграции применяются самостоятельно:
+
+```bash
+psql postgres://admin:admin@localhost:55432/locatedb?sslmode=disable \
+  -f migrations/000001_create_sessions.up.sql
+
+psql postgres://admin:admin@localhost:55432/locatedb?sslmode=disable \
+  -f migrations/000002_create_session_points.up.sql
+```
+
 ---
 
 ## Тестирование
