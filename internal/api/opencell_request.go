@@ -60,7 +60,6 @@ func Query(r OpenCellRequest) (*OpenCellResponse, error) {
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
-	//fmt.Println("Raw response", string(body))
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("expected from OpenCellID 200 OK, got: %d: %s", resp.StatusCode, string(body))

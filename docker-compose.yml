@@ -11,5 +11,18 @@ services:
       - "55432:5432"
     volumes:
       - locatedb_data:/var/lib/postgresql/data
+  updatedb:
+      image: postgres:latest
+      container_name: lbs_updatedb
+      restart: unless-stopped
+      environment:
+        POSTGRES_DB: updatedb
+        POSTGRES_USER: admin
+        POSTGRES_PASSWORD: admin
+      ports:
+        - "55433:5433"
+      volumes:
+        - updatedb_data:/var/lib/postgresql/data
 volumes:
   locatedb_data:
+  updatedb_data:

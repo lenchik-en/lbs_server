@@ -24,7 +24,7 @@ func (a *App) HandleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Get POST /locate request from Client %s", r.RemoteAddr)
+	log.Printf("Get /locate request from Client %s", r.RemoteAddr)
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
@@ -116,6 +116,8 @@ func Run(dab *db.LocateDB) {
 	http.HandleFunc("/locate", app.HandleLocate)
 
 	http.HandleFunc("/locate/opencell", app.HandleLocateOpenCell)
+
+	http.HandleFunc("update", app.HandleUpdate)
 
 	fmt.Println("Server listening on :8080...")
 
