@@ -21,6 +21,8 @@ func NewLocateDB(dsn string) *LocateDB {
 	return &LocateDB{Dsn: dsn}
 }
 
+func (l LocateDB) GetConnection() *sql.DB { return l.DB }
+
 func (l *LocateDB) Connect() error {
 	dsn := l.Dsn
 	if dsn == "" {

@@ -1,11 +1,20 @@
 package api
 
+const (
+	Gsm   = "gsm"
+	Wcdma = "wcdma"
+	Lte   = "lte"
+)
+
 type LocateRequest struct {
-	Cell []Cell `json:"cell"`
-	Wifi []Wifi `json:"wifi"`
+	SessionUUID string `json:"sessionUUID"`
+	Cell        []Cell `json:"cell"`
+	Wifi        []Wifi `json:"wifi"`
+	IP          []Ip   `json:"ip"`
 }
 
 type Cell struct {
+	Tech  string
 	GSM   *GSM   `json:"gsm"`
 	WCDMA *WCDMA `json:"wcdma"`
 	LTE   *LTE   `json:"lte"`
@@ -51,4 +60,16 @@ type Wifi struct {
 	SignalStrength int `json:"signal_strength"`
 	CHANNEL        int `json:"channel"`
 	AGE            int `json:"age"`
+}
+
+type Ip struct {
+	Address string `json:"address"`
+}
+
+type LocationResponse struct {
+	Point struct {
+		Lat float64
+		Lon float64
+	}
+	Accuracy int
 }
