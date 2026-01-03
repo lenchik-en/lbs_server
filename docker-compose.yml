@@ -1,6 +1,5 @@
-version: "3.9"
-
 services:
+  #TODO: healthcheck
   locatedb:
     image: postgres:15
     container_name: lbs_locatedb
@@ -13,7 +12,22 @@ services:
       - "55432:5432"
     volumes:
       - locatedb_data:/var/lib/postgresql/data
-
+  #TODO: healthcheck
+  externaldb:
+    image: postgres:15
+    container_name: lbs_externaldb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: externaldb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "55434:5432"
+    volumes:
+      - externaldb_data:/var/lib/postgresql/data
+      - ./external_data:/external_data
+      - ./migrations/externaldb:/docker-entrypoint-initdb.d
+  #TODO: healthcheck
   updatedb:
     image: postgres:15
     container_name: lbs_updatedb
@@ -43,3 +57,4 @@ services:
 volumes:
   locatedb_data:
   updatedb_data:
+  externaldb_data:
