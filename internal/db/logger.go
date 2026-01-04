@@ -7,17 +7,17 @@ import (
 	"fmt"
 )
 
-type Logger struct {
+type Session struct {
 	db *sql.DB
 }
 
-func NewLogger(db *sql.DB) *Logger {
-	return &Logger{db: db}
+func NewLogger(db *sql.DB) *Session {
+	return &Session{db: db}
 }
 
 // CreateSessionIfNotExists - создает сессию, если ее нет
-func (l *Logger) CreateSessionIfNotExists(ctx context.Context, sessionUUID string) error {
-	_, err := l.db.ExecContext(ctx,
+func (s *Session) CreateSessionIfNotExists(ctx context.Context, sessionUUID string) error {
+	_, err := s.db.ExecContext(ctx,
 		`		
 		INSERT INTO sessions (session_uuid)
 		VALUES ($1)
@@ -26,7 +26,7 @@ func (l *Logger) CreateSessionIfNotExists(ctx context.Context, sessionUUID strin
 	return err
 }
 
-func (l *Logger) SavePoint(ctx context.Context, sessionUUID string, lat float64, lon float64, accuracy int, source string, rawReq interface{}, rawResp interface{}) error {
+func (s *Session) SavePoint(ctx context.Context, sessionUUID string, lat float64, lon float64, accuracy int, source string, rawReq interface{}, rawResp interface{}) error {
 	var rawReqJSON, rawRespJSON []byte
 	var err error
 
@@ -44,7 +44,7 @@ func (l *Logger) SavePoint(ctx context.Context, sessionUUID string, lat float64,
 		}
 	}
 
-	_, err = l.db.ExecContext(ctx, `
+	_, err = s.db.ExecContext(ctx, `
 		INSERT INTO session_points (
 			session_uuid,
 			timestamp,

@@ -1,11 +1,11 @@
 package app
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/lenchik-en/lbs_server/internal/api"
@@ -13,8 +13,9 @@ import (
 )
 
 type App struct {
-	DB     *sql.DB
-	Logger *db.Logger
+	locateDB   *db.LocateDB
+	externalDB *db.ExternalDB
+	Session    *db.Session
 }
 
 func (a *App) HandleHealth(w http.ResponseWriter, r *http.Request) {
@@ -36,88 +37,98 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//TODO: уточнить нужно ли присваивать, если не получен от клиента
+	//TODO: уточнить нужно ли присваивать, если не получен от клиента(или генерирует со стороны клиента)
 	if req.SessionUUID == "" {
 		req.SessionUUID = uuid.New().String()
 	}
 	log.Printf("SessionUUID: %s", req.SessionUUID)
 
-	logger := a.Logger
-
-	err := logger.CreateSessionIfNotExists(r.Context(), req.SessionUUID)
+	session := a.Session
+	err := session.CreateSessionIfNotExists(r.Context(), req.SessionUUID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to add sessionUUID to the database: %v", err), http.StatusInternalServerError)
 		//return
 	}
 
-	log.Printf("Convert to OpenCellID...")
-	openCellRequest := api.ConvertLocateToOpenCell(req)
-
-	var best *api.OpenCellResponse
-	for _, r := range openCellRequest {
-		resp, err := api.Query(r)
+	var location *db.Location
+	for _, cell := range req.Cell {
+		//1. Looking at LocateDB
+		loc, err := a.locateDB.FindLTE(r.Context(), cell.LTE)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("error from OpenCellID: %v", err), http.StatusInternalServerError)
-			continue
+			http.Error(w, fmt.Sprintf("locateDB error: %v", err), http.StatusInternalServerError)
+			return
 		}
-		if resp.Status == "ok" {
-			best = resp
+
+		//2. If not in LocateDB, then looking at ExternalDB
+		if loc == nil {
+			loc, err = a.externalDB.FindLTE(r.Context(), cell.LTE)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("externalDB error: %v", err), http.StatusInternalServerError)
+				return
+			}
+
+			//3. if found, then save it to UpdateDB(TODO: or LocateDB)
+			if loc != nil {
+				//_ = a.locateDB.SaveLTE
+			}
+		}
+
+		if loc != nil {
+			location = loc
 			break
 		}
+
 	}
 
-	if best == nil {
+	if location == nil {
 		http.Error(w, "Location not found", http.StatusNotFound)
 		return
 	}
 
-	_ = logger.SavePoint(r.Context(), req.SessionUUID, best.Lat, best.Lon, best.Accuracy, "opencell", req, best)
-
-	loc := api.ConvertOpenCellToLocation(best)
+	_ = session.SavePoint(r.Context(), req.SessionUUID, location.Point.Lat, location.Point.Lon, location.Accuracy, "opencell", req, location)
 
 	out := map[string]any{
 		"sessionUUID": req.SessionUUID,
-		"location":    loc,
+		"location":    location,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(out)
 	log.Printf("POST /locate for Client %s is done", r.RemoteAddr)
 }
 
-func (a *App) HandleLocateOpenCell(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
+func Run() {
+	dsn := os.Getenv("DB_DSN")
+	if dsn == "" {
+		log.Fatalf("no path in DB_DSN")
 	}
 
-	var req api.OpenCellRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+	edsn := os.Getenv("EDB_DSN")
+	if dsn == "" {
+		log.Fatalf("no path in EDB_DSN")
 	}
 
-	resp, err := api.Query(req)
+	locateDB, err := db.NewLocateDB(dsn)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error from OpenCellID: %v", err), http.StatusInternalServerError)
-		return
+		log.Fatalf("failed to connect locateDB: %v", err)
 	}
+	defer locateDB.DB.Close()
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
-}
+	externalDB, err := db.NewExternalDB(edsn)
+	if err != nil {
+		log.Fatalf("failed to connect externalDB: %v", err)
+	}
+	defer externalDB.DB.Close()
 
-func Run(dab *db.LocateDB) {
 	app := &App{
-		DB:     dab.DB,
-		Logger: db.NewLogger(dab.DB),
+		locateDB:   locateDB,
+		externalDB: externalDB,
+		Session:    db.NewLogger(locateDB.DB),
 	}
 	http.HandleFunc("/healthz", app.HandleHealth)
 
 	http.HandleFunc("/locate", app.HandleLocate)
 
-	http.HandleFunc("/locate/opencell", app.HandleLocateOpenCell)
-
-	http.HandleFunc("update", app.HandleUpdate)
+	//http.HandleFunc("/update", app.HandleUpdate)
 
 	fmt.Println("Server listening on :8080...")
 

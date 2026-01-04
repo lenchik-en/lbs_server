@@ -4,6 +4,7 @@
 
 Проект реализует сервер геолокации по данным сотовых сетей (GSM / WCDMA / LTE) и Wi‑Fi, IP, совместимый по входному формату с Яндекс Локатором, с использованием сторонней базы данных на этапе PoC.
 
+TODO: - написать образец .env файла, инструкции к нему
 ---
 
 ## PoC
@@ -166,4 +167,24 @@ curl -X POST http://localhost:8080/locate \
     "accuracy": 500
   }
 }
+```
+
+
+Для перекачки данных в externaldb используется команда
+```postgresql
+COPY cells (
+radio,
+mcc,
+mnc,
+area,
+cell,
+unit,
+strength,
+lat,
+lon
+)
+FROM '/external_data/cell.csv'
+DELIMITER ','
+CSV;
+
 ```
