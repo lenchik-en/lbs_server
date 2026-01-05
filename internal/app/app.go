@@ -13,6 +13,7 @@ import (
 type App struct {
 	locateDB   *db.LocateDB
 	externalDB *db.ExternalDB
+	updateDB   *db.UpdateDB
 	Session    *db.Session
 }
 
@@ -27,6 +28,11 @@ func Run() {
 		log.Fatalf("no path in EDB_DSN")
 	}
 
+	udsn := os.Getenv("UDB_DSN")
+	if udsn == "" {
+		log.Fatalf("no path in UDB_DSN")
+	}
+
 	locateDB, err := db.NewLocateDB(dsn)
 	if err != nil {
 		log.Fatalf("failed to connect locateDB: %v", err)
@@ -39,16 +45,23 @@ func Run() {
 	}
 	defer externalDB.DB.Close()
 
+	updateDB, err := db.NewUpdateDB(udsn)
+	if err != nil {
+		log.Fatalf("failed to connect updateDB: %v", err)
+	}
+	defer updateDB.DB.Close()
+
 	app := &App{
 		locateDB:   locateDB,
 		externalDB: externalDB,
+		updateDB:   updateDB,
 		Session:    db.NewLogger(locateDB.DB),
 	}
 	http.HandleFunc("/healthz", app.HandleHealth)
 
 	http.HandleFunc("/locate", app.HandleLocate)
 
-	//http.HandleFunc("/update", app.HandleUpdate)
+	http.HandleFunc("/update", app.HandleUpdate)
 
 	fmt.Println("Server listening on :8080...")
 

@@ -1,11 +1,5 @@
 package api
 
-const (
-	Gsm   = "gsm"
-	Wcdma = "wcdma"
-	Lte   = "lte"
-)
-
 // TODO: сделать отдельную папку со структурами?
 type LocateRequest struct {
 	SessionUUID string `json:"sessionUUID"`
