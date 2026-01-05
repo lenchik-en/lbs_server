@@ -6,6 +6,7 @@ const (
 	Lte   = "lte"
 )
 
+// TODO: сделать отдельную папку со структурами?
 type LocateRequest struct {
 	SessionUUID string `json:"sessionUUID"`
 	Cell        []Cell `json:"cell"`
@@ -66,10 +67,11 @@ type Ip struct {
 	Address string `json:"address"`
 }
 
-type LocationResponse struct {
+type Location struct {
 	Point struct {
 		Lat float64
 		Lon float64
 	}
 	Accuracy int
+	//TODO: добавить источник? locate/external
 }
