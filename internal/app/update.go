@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,10 +23,9 @@ func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, cell := range req.Cell {
-		if err := a.updateDB.InsertCell(r.Context(), cell); err != nil {
-			return
-		}
+	if err := a.insertToUpdate(r.Context(), req, r.Body); err != nil {
+		http.Error(w, "Failed to insert to UpdateDB", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -34,4 +34,58 @@ func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("POST /update for Client %s is done", r.RemoteAddr)
+}
+
+func (a *App) insertToUpdate(ctx context.Context, req api.UpdateRequest, rawJSON any) error {
+	if err := a.validateUpdate(req); err != nil {
+		return err
+	}
+
+	if err := a.updateDB.InsertCell(ctx, req.Cell, req.Location, rawJSON); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *App) validateUpdate(req api.UpdateRequest) error {
+	source := 0
+	if req.Cell != nil {
+		if req.Cell.LTE == nil && req.Cell.GSM == nil && req.Cell.WCDMA == nil {
+			return fmt.Errorf("cell source provided but empty")
+		}
+		source++
+	}
+	if req.Wifi != nil {
+		source++
+	}
+	if req.IP != nil {
+		source++
+	}
+
+	if source != 1 {
+		return fmt.Errorf("only one source must be provided")
+	}
+
+	if req.Location == nil {
+		return fmt.Errorf("no location were provided")
+	}
+
+	if err := a.validateLocation(req.Location); err != nil {
+		return fmt.Errorf("invalid location: %v", err)
+	}
+
+	return nil
+}
+
+func (a *App) validateLocation(loc *api.Location) error {
+	if loc.Point.Lat < -90 || loc.Point.Lat > 90 {
+		return fmt.Errorf("latitude out of range")
+	}
+	if loc.Point.Lon < -180 || loc.Point.Lon > 180 {
+		return fmt.Errorf("longitude out of range")
+	}
+	if loc.Accuracy <= 0 {
+		return fmt.Errorf("accuracy must be positive")
+	}
+	return nil
 }
