@@ -78,18 +78,20 @@ func (a *App) findLocation(ctx context.Context, cell api.Cell) (*api.Location, e
 		return nil, fmt.Errorf("error in locateDB: %v", err)
 	}
 
-	//2. If not in LocateDB, then looking at ExternalDB
-	if loc == nil {
-		loc, err = a.findInDB(ctx, a.externalDB, cell)
-		if err != nil {
-			return nil, fmt.Errorf("error in externalDB: %v", err)
-		}
+	if loc != nil {
+		return loc, nil
+	}
 
-		//3. if found, then save it to UpdateDB(TODO: or LocateDB)
-		if loc != nil {
-			//_ = a.locateDB.SaveLTE
-			return loc, nil
-		}
+	//2. If not in LocateDB, then looking at ExternalDB
+	loc, err = a.findInDB(ctx, a.externalDB, cell)
+	if err != nil {
+		return nil, fmt.Errorf("error in externalDB: %v", err)
+	}
+
+	//3. if found, then save it to UpdateDB(TODO: or LocateDB)
+	if loc != nil {
+		//_ = a.locateDB.SaveLTE
+		return loc, nil
 	}
 
 	return nil, nil

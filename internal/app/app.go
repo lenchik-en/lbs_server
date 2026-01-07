@@ -11,8 +11,8 @@ import (
 )
 
 type App struct {
-	locateDB   *db.LocateDB
-	externalDB *db.ExternalDB
+	locateDB   db.CellFinder
+	externalDB db.CellFinder
 	updateDB   *db.UpdateDB
 	Session    *db.Session
 }

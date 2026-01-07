@@ -62,10 +62,10 @@ type Ip struct {
 }
 
 type Location struct {
-	Point struct {
-		Lat float64
-		Lon float64
-	}
 	Accuracy int
-	//TODO: добавить источник? locate/external
+	Point    //TODO: добавить источник? locate/external
+}
+type Point struct {
+	Lat float64
+	Lon float64
 }
