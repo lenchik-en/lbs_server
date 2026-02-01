@@ -40,20 +40,6 @@ services:
       - "55433:5432"
     volumes:
       - updatedb_data:/var/lib/postgresql/data
-
-  server:
-    build: .
-    container_name: lbs_server
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "8080:8080"
-    depends_on:
-      - locatedb
-    environment:
-      DATABASE_URL: postgres://admin:admin@locatedb:5432/locatedb?sslmode=disable
-
 volumes:
   locatedb_data:
   updatedb_data:

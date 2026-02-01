@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/lenchik-en/lbs_server/internal/api"
+	api "github.com/lenchik-en/lbs_server/internal/models"
 )
 
 type UpdateDB struct {
@@ -66,4 +66,8 @@ func (u *UpdateDB) InsertCell(ctx context.Context, cell *api.Cell, loc *api.Loca
 	default:
 		return fmt.Errorf("unsupported cell type")
 	}
+}
+
+func (u *UpdateDB) GetConnection() *sql.DB {
+	return u.DB
 }

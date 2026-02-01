@@ -1,4 +1,4 @@
-package api
+package models
 
 // TODO: сделать отдельную папку со структурами?
 type LocateRequest struct {

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/lenchik-en/lbs_server/internal/api"
+	api "github.com/lenchik-en/lbs_server/internal/models"
 )
 
 type ExternalDB struct {
@@ -109,4 +109,8 @@ func (e *ExternalDB) FindWCDMA(ctx context.Context, wcdma *api.WCDMA) (*api.Loca
 	loc.Accuracy = 500
 
 	return &loc, nil
+}
+
+func (e *ExternalDB) GetConnection() *sql.DB {
+	return e.DB
 }

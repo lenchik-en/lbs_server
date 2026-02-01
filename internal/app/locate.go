@@ -31,7 +31,7 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("SessionUUID: %s", req.SessionUUID)
 
-	session := a.Session
+	session := a.session
 	err := session.CreateSessionIfNotExists(r.Context(), req.SessionUUID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to add sessionUUID to the database: %v", err), http.StatusInternalServerError)

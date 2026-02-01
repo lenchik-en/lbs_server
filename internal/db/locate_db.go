@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/lenchik-en/lbs_server/internal/api"
+	api "github.com/lenchik-en/lbs_server/internal/models"
 	_ "github.com/lib/pq"
 )
 
@@ -45,6 +45,7 @@ type CellFinder interface {
 	FindLTE(ctx context.Context, lte *api.LTE) (*api.Location, error)
 	FindGSM(ctx context.Context, gse *api.GSM) (*api.Location, error)
 	FindWCDMA(ctx context.Context, wcdma *api.WCDMA) (*api.Location, error)
+	GetConnection() *sql.DB
 }
 
 func (l *LocateDB) FindLTE(ctx context.Context, lte *api.LTE) (*api.Location, error) {
