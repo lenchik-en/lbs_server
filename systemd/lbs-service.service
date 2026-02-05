@@ -1,0 +1,15 @@
+[Unit]
+Description=LBS Server
+After=network.target
+
+[Service]
+Type=simple
+User=lbs
+WorkingDirectory=/opt/lbs-server
+ExecStart=/opt/lbs-server/lbs-server
+Restart=always
+RestartSec=5
+EnvironmentFile=/opt/lbs-server/configs/lbs-server.env
+
+[Install]
+WantedBy=multi-user.target

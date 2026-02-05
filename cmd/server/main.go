@@ -17,6 +17,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load .env file")
 	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -26,6 +27,7 @@ func main() {
 		log.Fatalf("failed to run app: %v", err)
 	}
 
+	//todo: закинуть в Run
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", app.HandleHealth)
 	mux.HandleFunc("/locate", app.HandleLocate)
@@ -49,6 +51,7 @@ func main() {
 	<-ctx.Done()
 
 	log.Println("Shutting down server...")
+	//todo: сделать фцнкцию app.SHutdown()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

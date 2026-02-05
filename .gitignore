@@ -32,3 +32,4 @@ external_data/
 # Editor/IDE
 .idea/
 .vscode/
+.vs/

@@ -3,19 +3,19 @@ package app
 import (
 	"testing"
 
-	"github.com/lenchik-en/lbs_server/internal/api"
+	"github.com/lenchik-en/lbs_server/internal/models"
 )
 
-func validLocation() *api.Location {
-	return &api.Location{
-		Point:    api.Point{Lat: 55.75, Lon: 37.61},
+func validLocation() *models.Location {
+	return &models.Location{
+		Point:    models.Point{Lat: 55.75, Lon: 37.61},
 		Accuracy: 50,
 	}
 }
 
-func validLTECell() *api.Cell {
-	return &api.Cell{
-		LTE: &api.LTE{
+func validLTECell() *models.Cell {
+	return &models.Cell{
+		LTE: &models.LTE{
 			MCC: 250,
 			MNC: 99,
 			TAC: 123,
@@ -29,12 +29,12 @@ func TestValidateUpdate(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		req     api.UpdateRequest
+		req     models.UpdateRequest
 		wantErr bool
 	}{
 		{
 			name: "valid cell update",
-			req: api.UpdateRequest{
+			req: models.UpdateRequest{
 				Cell:     validLTECell(),
 				Location: validLocation(),
 			},
@@ -42,41 +42,41 @@ func TestValidateUpdate(t *testing.T) {
 		},
 		{
 			name: "no source provided",
-			req: api.UpdateRequest{
+			req: models.UpdateRequest{
 				Location: validLocation(),
 			},
 			wantErr: true,
 		},
 		{
 			name: "multiple sources",
-			req: api.UpdateRequest{
+			req: models.UpdateRequest{
 				Cell:     validLTECell(),
-				Wifi:     &api.Wifi{},
+				Wifi:     &models.Wifi{},
 				Location: validLocation(),
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty cell source",
-			req: api.UpdateRequest{
-				Cell:     &api.Cell{},
+			req: models.UpdateRequest{
+				Cell:     &models.Cell{},
 				Location: validLocation(),
 			},
 			wantErr: true,
 		},
 		{
 			name: "no location",
-			req: api.UpdateRequest{
+			req: models.UpdateRequest{
 				Cell: validLTECell(),
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid location",
-			req: api.UpdateRequest{
+			req: models.UpdateRequest{
 				Cell: validLTECell(),
-				Location: &api.Location{
-					Point:    api.Point{Lat: 200, Lon: 0},
+				Location: &models.Location{
+					Point:    models.Point{Lat: 200, Lon: 0},
 					Accuracy: 10,
 				},
 			},
@@ -101,29 +101,29 @@ func TestValidateUpdate(t *testing.T) {
 func TestValidateLocation(t *testing.T) {
 	a, tests := &App{}, []struct {
 		name    string
-		loc     *api.Location
+		loc     *models.Location
 		wantErr bool
 	}{
 		{
 			name: "valid location",
-			loc: &api.Location{
-				Point:    api.Point{Lat: 55.75, Lon: 37.61},
+			loc: &models.Location{
+				Point:    models.Point{Lat: 55.75, Lon: 37.61},
 				Accuracy: 50,
 			},
 			wantErr: false,
 		},
 		{
 			name: "zero coordinates allowed",
-			loc: &api.Location{
-				Point:    api.Point{Lat: 0, Lon: 0},
+			loc: &models.Location{
+				Point:    models.Point{Lat: 0, Lon: 0},
 				Accuracy: 100,
 			},
 			wantErr: false,
 		},
 		{
 			name: "latitude out of range",
-			loc: &api.Location{
-				Point: api.Point{
+			loc: &models.Location{
+				Point: models.Point{
 					Lat: 91,
 					Lon: 0,
 				},
@@ -133,16 +133,16 @@ func TestValidateLocation(t *testing.T) {
 		},
 		{
 			name: "longitude out of range",
-			loc: &api.Location{
-				Point:    api.Point{Lat: 0, Lon: -181},
+			loc: &models.Location{
+				Point:    models.Point{Lat: 0, Lon: -181},
 				Accuracy: 10,
 			},
 			wantErr: true,
 		},
 		{
 			name: "accuracy must be positive",
-			loc: &api.Location{
-				Point:    api.Point{Lat: 10, Lon: 10},
+			loc: &models.Location{
+				Point:    models.Point{Lat: 10, Lon: 10},
 				Accuracy: 0,
 			},
 			wantErr: true,

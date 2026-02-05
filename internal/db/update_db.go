@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	api "github.com/lenchik-en/lbs_server/internal/models"
+	"github.com/lenchik-en/lbs_server/internal/models"
 )
 
 type UpdateDB struct {
@@ -24,7 +24,7 @@ func NewUpdateDB(dsn string) (*UpdateDB, error) {
 	}, nil
 }
 
-func (u *UpdateDB) InsertCell(ctx context.Context, cell *api.Cell, loc *api.Location, rawJSON any) error {
+func (u *UpdateDB) InsertCell(ctx context.Context, cell *models.Cell, loc *models.Location, rawJSON any) error {
 	data, err := json.Marshal(rawJSON)
 	if err != nil {
 		return err
