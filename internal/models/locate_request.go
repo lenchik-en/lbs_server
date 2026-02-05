@@ -1,6 +1,12 @@
 package models
 
-// TODO: сделать отдельную папку со структурами?
+type Source string
+
+const (
+	EXTERNAL = "external"
+	LOCATE   = "locate"
+)
+
 type LocateRequest struct {
 	SessionUUID string `json:"sessionUUID"`
 	Cell        []Cell `json:"cell"`
@@ -63,7 +69,8 @@ type Ip struct {
 
 type Location struct {
 	Accuracy int
-	Point    //TODO: добавить источник? locate/external
+	Source   Source
+	Point
 }
 type Point struct {
 	Lat float64

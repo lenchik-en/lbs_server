@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/lenchik-en/lbs_server/internal/api"
+	"github.com/lenchik-en/lbs_server/internal/models"
 )
 
 func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
@@ -17,7 +17,7 @@ func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req api.UpdateRequest
+	var req models.UpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
@@ -36,7 +36,7 @@ func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	log.Printf("POST /update for Client %s is done", r.RemoteAddr)
 }
 
-func (a *App) insertToUpdate(ctx context.Context, req api.UpdateRequest, rawJSON any) error {
+func (a *App) insertToUpdate(ctx context.Context, req models.UpdateRequest, rawJSON any) error {
 	if err := a.validateUpdate(req); err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (a *App) insertToUpdate(ctx context.Context, req api.UpdateRequest, rawJSON
 	return nil
 }
 
-func (a *App) validateUpdate(req api.UpdateRequest) error {
+func (a *App) validateUpdate(req models.UpdateRequest) error {
 	source := 0
 	if req.Cell != nil {
 		if req.Cell.LTE == nil && req.Cell.GSM == nil && req.Cell.WCDMA == nil {
@@ -77,7 +77,7 @@ func (a *App) validateUpdate(req api.UpdateRequest) error {
 	return nil
 }
 
-func (a *App) validateLocation(loc *api.Location) error {
+func (a *App) validateLocation(loc *models.Location) error {
 	if loc.Point.Lat < -90 || loc.Point.Lat > 90 {
 		return fmt.Errorf("latitude out of range")
 	}
