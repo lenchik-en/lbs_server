@@ -2,13 +2,13 @@
 
 set -e
 
-ecgho "Starting locate database migration..."
-migrate -path migrations/locatedb -database "$DB_DSN" up
+echo "Starting locate database migration..."
+migrate -path ../migrations/locatedb -database postgres://admin:admin@localhost:55432/locatedb?sslmode=disable up
 
-ecgho "Starting update database migration..."
-migrate -path migrations/updatedb -database "$UDB_DSN" up
+echo "Starting update database migration..."
+migrate -path ../migrations/updatedb -database postgres://admin:admin@localhost:55433/updatedb?sslmode=disable up
 
-ecgho "Starting external database migration..."
-migrate -path migrations/externaldb -database "$EDB_DSN" up
+echo "Starting external database migration..."
+migrate -path ../migrations/externaldb -database postgres://admin:admin@localhost:55434/externaldb?sslmode=disable up
 
-ecgho "Database migrations completed successfully."
+echo "Database migrations completed successfully."

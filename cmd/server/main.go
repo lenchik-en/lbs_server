@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load(".env")
+	err := godotenv.Load("lbs-server.env")
 	if err != nil {
 		log.Fatalf("failed to load .env file")
 	}

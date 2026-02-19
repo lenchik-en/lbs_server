@@ -21,13 +21,13 @@ echo "==> Checking Go..."
 if ! command -v go >/dev/null 2>&1; then
   echo "Go not found, installing..."
 
-  GO_VERSION=1.23
+  GO_VERSION=1.24.13
   ARCH=amd64
 
-  curl -LO https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz
+  wget https://go.dev/dl/go1.24.13.linux-amd64.tar.gz
   sudo rm -rf /usr/local/go
-  sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz
-  rm go${GO_VERSION}.linux-${ARCH}.tar.gz
+  sudo tar -C /usr/local -xzf go1.24.13.linux-amd64.tar.gz
+  rm go1.24.13.linux-amd64.tar.gz
 
   echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.profile
   export PATH=$PATH:/usr/local/go/bin
