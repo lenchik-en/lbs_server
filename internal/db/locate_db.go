@@ -41,8 +41,7 @@ func NewLocateDB(dsn string) (*LocateDB, error) {
 func (l *LocateDB) GetConnection() *sql.DB { return l.DB }
 
 type CellFinder interface {
-	//TODO: убрать зависимость от models
-	FindLTE(ctx context.Context, lte *models.LTE) (*models.Location, error)
+ 	FindLTE(ctx context.Context, lte *models.LTE) (*models.Location, error)
 	FindGSM(ctx context.Context, gse *models.GSM) (*models.Location, error)
 	FindWCDMA(ctx context.Context, wcdma *models.WCDMA) (*models.Location, error)
 	GetConnection() *sql.DB

@@ -52,6 +52,18 @@ func (a *App) Run() error {
 	return nil
 }
 
+func (a *App) CloseDBConnections() {
+	if a.locateDB != nil {
+		a.locateDB.GetConnection().Close()
+	}
+	if a.externalDB != nil {
+		a.externalDB.GetConnection().Close()
+	}
+	if a.updateDB != nil {
+		a.updateDB.DB.Close()
+	}
+}
+
 func (a *App) HandleHealth(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]string{"status": "ok"}
 	w.Header().Set("Content-Type", "application/json")
