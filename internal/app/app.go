@@ -33,20 +33,17 @@ func (a *App) Run() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect locateDB: %v", err)
 	}
-	defer locateDB.DB.Close()
-
+ 
 	externalDB, err := db.NewExternalDB(cfg.EDBDSN)
 	if err != nil {
 		return fmt.Errorf("failed to connect externalDB: %v", err)
 	}
-	defer externalDB.DB.Close()
-
+ 
 	updateDB, err := db.NewUpdateDB(cfg.UDBDSN)
 	if err != nil {
 		return fmt.Errorf("failed to connect updateDB: %v", err)
 	}
-	defer updateDB.DB.Close()
-
+ 
 	a.New(locateDB, externalDB, updateDB)
 
 	return nil
