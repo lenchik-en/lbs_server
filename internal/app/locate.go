@@ -8,8 +8,8 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/lenchik-en/lbs_server/internal/api"
 	"github.com/lenchik-en/lbs_server/internal/db"
+	"github.com/lenchik-en/lbs_server/internal/models"
 )
 
 func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
@@ -19,7 +19,7 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req api.LocateRequest
+	var req models.LocateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
@@ -31,6 +31,11 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("SessionUUID: %s", req.SessionUUID)
 
+	session := a.session
+	err := session.CreateSessionIfNotExists(r.Context(), req.SessionUUID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to add sessionUUID to the database: %v", err), http.StatusInternalServerError)
+		//return
 	if err := a.Session.CreateSessionIfNotExists(r.Context(), req.SessionUUID); err != nil {
 		log.Printf("[WARN] failed to create session %s: %v", req.SessionUUID, err)
 	}
@@ -71,7 +76,7 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 	log.Printf("POST /locate for Client %s is done", r.RemoteAddr)
 }
 
-func (a *App) findLocation(ctx context.Context, cell api.Cell) (*api.Location, error) {
+func (a *App) findLocation(ctx context.Context, cell models.Cell) (*models.Location, error) {
 	//1. Looking at LocateDB
 	loc, err := a.findInDB(ctx, a.locateDB, cell)
 	if err != nil {

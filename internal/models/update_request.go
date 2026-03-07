@@ -1,4 +1,4 @@
-package api
+package models
 
 type UpdateRequest struct {
 	Cell     *Cell     `json:"cell,omitempty"`

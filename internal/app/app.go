@@ -3,10 +3,9 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 
+	"github.com/lenchik-en/lbs_server/internal/config"
 	"github.com/lenchik-en/lbs_server/internal/db"
 )
 
@@ -14,59 +13,51 @@ type App struct {
 	locateDB   db.CellFinder
 	externalDB db.CellFinder
 	updateDB   *db.UpdateDB
-	Session    *db.Session
+	session    *db.Session
 }
 
-func Run() {
-	dsn := os.Getenv("DB_DSN")
-	if dsn == "" {
-		log.Fatalf("no path in DB_DSN")
-	}
+func (a *App) New(locate db.CellFinder, external db.CellFinder, update *db.UpdateDB) {
+	a.locateDB = locate
+	a.externalDB = external
+	a.updateDB = update
+	a.session = db.NewLogger(locate.GetConnection())
+}
 
-	edsn := os.Getenv("EDB_DSN")
-	if edsn == "" {
-		log.Fatalf("no path in EDB_DSN")
-	}
-
-	udsn := os.Getenv("UDB_DSN")
-	if udsn == "" {
-		log.Fatalf("no path in UDB_DSN")
-	}
-
-	locateDB, err := db.NewLocateDB(dsn)
+func (a *App) Run() error {
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("failed to connect locateDB: %v", err)
+		return fmt.Errorf("failed to load config: %v", err)
 	}
-	defer locateDB.DB.Close()
 
-	externalDB, err := db.NewExternalDB(edsn)
+	locateDB, err := db.NewLocateDB(cfg.DBDSN)
 	if err != nil {
-		log.Fatalf("failed to connect externalDB: %v", err)
+		return fmt.Errorf("failed to connect locateDB: %v", err)
 	}
-	defer externalDB.DB.Close()
-
-	updateDB, err := db.NewUpdateDB(udsn)
+ 
+	externalDB, err := db.NewExternalDB(cfg.EDBDSN)
 	if err != nil {
-		log.Fatalf("failed to connect updateDB: %v", err)
+		return fmt.Errorf("failed to connect externalDB: %v", err)
 	}
-	defer updateDB.DB.Close()
-
-	app := &App{
-		locateDB:   locateDB,
-		externalDB: externalDB,
-		updateDB:   updateDB,
-		Session:    db.NewLogger(locateDB.DB),
+ 
+	updateDB, err := db.NewUpdateDB(cfg.UDBDSN)
+	if err != nil {
+		return fmt.Errorf("failed to connect updateDB: %v", err)
 	}
-	http.HandleFunc("/healthz", app.HandleHealth)
+ 
+	a.New(locateDB, externalDB, updateDB)
 
-	http.HandleFunc("/locate", app.HandleLocate)
+	return nil
+}
 
-	http.HandleFunc("/update", app.HandleUpdate)
-
-	fmt.Println("Server listening on :8080...")
-
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatalf("failed to start server: %v", err)
+func (a *App) CloseDBConnections() {
+	if a.locateDB != nil {
+		a.locateDB.GetConnection().Close()
+	}
+	if a.externalDB != nil {
+		a.externalDB.GetConnection().Close()
+	}
+	if a.updateDB != nil {
+		a.updateDB.DB.Close()
 	}
 }
 

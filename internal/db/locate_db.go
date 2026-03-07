@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/lenchik-en/lbs_server/internal/api"
+	"github.com/lenchik-en/lbs_server/internal/models"
 	_ "github.com/lib/pq"
 )
 
@@ -41,13 +41,13 @@ func NewLocateDB(dsn string) (*LocateDB, error) {
 func (l *LocateDB) GetConnection() *sql.DB { return l.DB }
 
 type CellFinder interface {
-	//TODO: убрать зависимость от api
-	FindLTE(ctx context.Context, lte *api.LTE) (*api.Location, error)
-	FindGSM(ctx context.Context, gse *api.GSM) (*api.Location, error)
-	FindWCDMA(ctx context.Context, wcdma *api.WCDMA) (*api.Location, error)
+ 	FindLTE(ctx context.Context, lte *models.LTE) (*models.Location, error)
+	FindGSM(ctx context.Context, gse *models.GSM) (*models.Location, error)
+	FindWCDMA(ctx context.Context, wcdma *models.WCDMA) (*models.Location, error)
+	GetConnection() *sql.DB
 }
 
-func (l *LocateDB) FindLTE(ctx context.Context, lte *api.LTE) (*api.Location, error) {
+func (l *LocateDB) FindLTE(ctx context.Context, lte *models.LTE) (*models.Location, error) {
 	const query = `
 		SELECT lat, lon
         FROM cells
@@ -61,7 +61,7 @@ func (l *LocateDB) FindLTE(ctx context.Context, lte *api.LTE) (*api.Location, er
 
 	row := l.DB.QueryRowContext(ctx, query, lte.MCC, lte.MNC, lte.TAC, lte.CI)
 
-	var loc api.Location
+	var loc models.Location
 	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			fmt.Printf("Query has no rows")
@@ -76,7 +76,7 @@ func (l *LocateDB) FindLTE(ctx context.Context, lte *api.LTE) (*api.Location, er
 	return &loc, nil
 }
 
-func (l *LocateDB) FindGSM(ctx context.Context, gse *api.GSM) (*api.Location, error) {
+func (l *LocateDB) FindGSM(ctx context.Context, gse *models.GSM) (*models.Location, error) {
 	const query = `
 		SELECT lat, lon
         FROM cells
@@ -90,7 +90,7 @@ func (l *LocateDB) FindGSM(ctx context.Context, gse *api.GSM) (*api.Location, er
 
 	row := l.DB.QueryRowContext(ctx, query, gse.MCC, gse.MNC, gse.LAC, gse.CID)
 
-	var loc api.Location
+	var loc models.Location
 	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			fmt.Printf("Query has no rows")
@@ -105,7 +105,7 @@ func (l *LocateDB) FindGSM(ctx context.Context, gse *api.GSM) (*api.Location, er
 	return &loc, nil
 }
 
-func (l *LocateDB) FindWCDMA(ctx context.Context, wcdma *api.WCDMA) (*api.Location, error) {
+func (l *LocateDB) FindWCDMA(ctx context.Context, wcdma *models.WCDMA) (*models.Location, error) {
 	const query = `
 		SELECT lat, lon
         FROM cells
@@ -119,7 +119,7 @@ func (l *LocateDB) FindWCDMA(ctx context.Context, wcdma *api.WCDMA) (*api.Locati
 
 	row := l.DB.QueryRowContext(ctx, query, wcdma.MCC, wcdma.MNC, wcdma.PSC, wcdma.CID)
 
-	var loc api.Location
+	var loc models.Location
 	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			fmt.Printf("Query has no rows")
