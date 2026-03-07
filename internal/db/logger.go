@@ -38,7 +38,7 @@ func (s *Session) SavePoint(ctx context.Context, sessionUUID string, lat float64
 	}
 
 	if rawResp != nil {
-		rawReqJSON, err = json.Marshal(rawResp)
+		rawRespJSON, err = json.Marshal(rawResp)
 		if err != nil {
 			return fmt.Errorf("failed to marshal rawResp: %w", err)
 		}

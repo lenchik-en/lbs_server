@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -17,13 +18,18 @@ func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	reqBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
 	var req api.UpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.Unmarshal(reqBody, &req); err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	if err := a.insertToUpdate(r.Context(), req, r.Body); err != nil {
+	if err := a.insertToUpdate(r.Context(), req, reqBody); err != nil {
 		http.Error(w, "Failed to insert to UpdateDB", http.StatusInternalServerError)
 		return
 	}

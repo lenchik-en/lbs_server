@@ -16,7 +16,7 @@ type UpdateDB struct {
 func NewUpdateDB(dsn string) (*UpdateDB, error) {
 	db, err := OpenPostgres(dsn)
 	if err != nil {
-		return nil, fmt.Errorf("locateDB: %w", err)
+		return nil, fmt.Errorf("updateDB: %w", err)
 	}
 	fmt.Println("Connection to UpdateDB is OK")
 	return &UpdateDB{

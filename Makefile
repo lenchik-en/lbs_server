@@ -23,17 +23,18 @@ EXTERNAL_DB_URL=postgres://admin:admin@localhost:55434/externaldb?sslmode=disabl
 
 migrate-locate:
 	@echo "Applying migrations to LocateDB..."
-	$(PSQL) "$(LOCATE_DB_URL)" -f $(MIGRATIONS_DIR)/locate/001_init.sql
+	$(PSQL) "$(LOCATE_DB_URL)" -f $(MIGRATIONS_DIR)/locatedb/000001_create_cells_and_wifis.up.sql
+	$(PSQL) "$(LOCATE_DB_URL)" -f $(MIGRATIONS_DIR)/locatedb/000002_create_session_uuid.up.sql
 	@echo "LocateDB migrations applied."
 
 migrate-update:
 	@echo "Applying migrations to UpdateDB..."
-	$(PSQL) "$(UPDATE_DB_URL)" -f $(MIGRATIONS_DIR)/update/001_init.sql
+	$(PSQL) "$(UPDATE_DB_URL)" -f $(MIGRATIONS_DIR)/updatedb/000001_create_tables.up.sql
 	@echo "UpdateDB migrations applied."
 
 migrate-external:
 	@echo "Applying migrations to ExternalDB..."
-	$(PSQL) "$(EXTERNAL_DB_URL)" -f $(MIGRATIONS_DIR)/external/001_init.sql
+	$(PSQL) "$(EXTERNAL_DB_URL)" -f $(MIGRATIONS_DIR)/externaldb/000001_create_external_cell_db.up.sql
 	@echo "ExternalDB migrations applied."
 
 migrate-all:

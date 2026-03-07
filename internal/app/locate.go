@@ -31,11 +31,8 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("SessionUUID: %s", req.SessionUUID)
 
-	session := a.Session
-	err := session.CreateSessionIfNotExists(r.Context(), req.SessionUUID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to add sessionUUID to the database: %v", err), http.StatusInternalServerError)
-		//return
+	if err := a.Session.CreateSessionIfNotExists(r.Context(), req.SessionUUID); err != nil {
+		log.Printf("[WARN] failed to create session %s: %v", req.SessionUUID, err)
 	}
 
 	var location *api.Location
@@ -60,14 +57,17 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = session.SavePoint(r.Context(), req.SessionUUID, location.Point.Lat, location.Point.Lon, location.Accuracy, "opencell", req, location)
+	if err := a.Session.SavePoint(r.Context(), req.SessionUUID, location.Point.Lat, location.Point.Lon, location.Accuracy, "external", req, location); err != nil {
+		log.Printf("[WARN] failed to save point for session %s: %v", req.SessionUUID, err)
+	}
 
-	out := map[string]any{
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]any{
 		"sessionUUID": req.SessionUUID,
 		"location":    location,
+	}); err != nil {
+		log.Printf("[WARN] failed to encode response: %v", err)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(out)
 	log.Printf("POST /locate for Client %s is done", r.RemoteAddr)
 }
 
@@ -90,21 +90,21 @@ func (a *App) findLocation(ctx context.Context, cell api.Cell) (*api.Location, e
 
 	//3. if found, then save it to UpdateDB(TODO: or LocateDB)
 	if loc != nil {
-		//_ = a.locateDB.SaveLTE
-		return loc, nil
+		go func() {
+			//_ = a.locateDB.SaveLTE
+		}()
 	}
-
-	return nil, nil
+	return loc, nil
 }
 
-func (a *App) findInDB(ctx context.Context, db db.CellFinder, cell api.Cell) (*api.Location, error) {
+func (a *App) findInDB(ctx context.Context, finder db.CellFinder, cell api.Cell) (*api.Location, error) {
 	switch {
 	case cell.LTE != nil:
-		return db.FindLTE(ctx, cell.LTE)
+		return finder.FindLTE(ctx, cell.LTE)
 	case cell.GSM != nil:
-		return db.FindGSM(ctx, cell.GSM)
+		return finder.FindGSM(ctx, cell.GSM)
 	case cell.WCDMA != nil:
-		return db.FindWCDMA(ctx, cell.WCDMA)
+		return finder.FindWCDMA(ctx, cell.WCDMA)
 	default:
 		return nil, fmt.Errorf("unknown type of radio")
 	}
