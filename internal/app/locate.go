@@ -31,16 +31,11 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("SessionUUID: %s", req.SessionUUID)
 
-	session := a.session
-	err := session.CreateSessionIfNotExists(r.Context(), req.SessionUUID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to add sessionUUID to the database: %v", err), http.StatusInternalServerError)
-		//return
-	if err := a.Session.CreateSessionIfNotExists(r.Context(), req.SessionUUID); err != nil {
+	if err := a.session.CreateSessionIfNotExists(r.Context(), req.SessionUUID); err != nil {
 		log.Printf("[WARN] failed to create session %s: %v", req.SessionUUID, err)
 	}
 
-	var location *api.Location
+	var location *models.Location
 	for _, cell := range req.Cell {
 		loc, err := a.findLocation(r.Context(), cell)
 		if err != nil {
@@ -62,7 +57,7 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.Session.SavePoint(r.Context(), req.SessionUUID, location.Point.Lat, location.Point.Lon, location.Accuracy, "external", req, location); err != nil {
+	if err := a.session.SavePoint(r.Context(), req.SessionUUID, location.Point.Lat, location.Point.Lon, location.Accuracy, "external", req, location); err != nil {
 		log.Printf("[WARN] failed to save point for session %s: %v", req.SessionUUID, err)
 	}
 
@@ -102,7 +97,7 @@ func (a *App) findLocation(ctx context.Context, cell models.Cell) (*models.Locat
 	return loc, nil
 }
 
-func (a *App) findInDB(ctx context.Context, finder db.CellFinder, cell api.Cell) (*api.Location, error) {
+func (a *App) findInDB(ctx context.Context, finder db.CellFinder, cell models.Cell) (*models.Location, error) {
 	switch {
 	case cell.LTE != nil:
 		return finder.FindLTE(ctx, cell.LTE)
