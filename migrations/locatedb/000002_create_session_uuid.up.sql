@@ -2,7 +2,7 @@ CREATE TABLE sessions
 (
     session_uuid UUID PRIMARY KEY, --идентификатор одной сессии
     started_at   TIMESTAMPTZ DEFAULT NOW(), --когда начали отправлять гео
-    ended_at     TIMESTAMPTZ --когда закончили(!уточнить, как понимать и надо ли вообще)
+    ended_at     TIMESTAMPTZ --когда закончили(!todo:уточнить, как понимать и надо ли вообще)
 );
 
 CREATE TABLE session_points
@@ -15,7 +15,7 @@ CREATE TABLE session_points
     accuracy     INTEGER,
     source       TEXT,  -- "lte", "wifi", "gsm", "fusion", "cache"
     raw_request  JSONB, -- исходные input-башки от клиента
-    raw_response JSONB  -- ответ от UnwiredLabs
+    raw_response JSONB
 );
 
 CREATE INDEX IF NOT EXISTS idx_session_points_session_ts ON session_points (session_uuid, timestamp);

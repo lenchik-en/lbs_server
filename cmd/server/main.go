@@ -8,15 +8,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/lenchik-en/lbs_server/internal/app"
 )
 
 func main() {
-	err := godotenv.Load("lbs-server.env")
-	if err != nil {
-		log.Fatalf("failed to load .env file")
-	}
+	// godotenv используется для локальной разработки без Docker.
+	// В контейнере переменные уже инжектируются через env_file в docker-compose,
+	// поэтому ошибку отсутствия файла .env игнорируем.
+	//if err := godotenv.Load(".env"); err != nil {
+	//	log.Println("no .env file found, using environment variables")
+	//}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

@@ -94,7 +94,7 @@ func (e *ExternalDB) FindWCDMA(ctx context.Context, wcdma *models.WCDMA) (*model
         LIMIT 1
 	`
 
-	row := e.DB.QueryRowContext(ctx, query, wcdma.MCC, wcdma.MNC, wcdma.PSC, wcdma.CID)
+	row := e.DB.QueryRowContext(ctx, query, wcdma.MCC, wcdma.MNC, wcdma.LAC, wcdma.CID)
 
 	var loc models.Location
 	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon); err != nil {

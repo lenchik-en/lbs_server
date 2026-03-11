@@ -25,11 +25,10 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//TODO: уточнить нужно ли присваивать, если не получен от клиента(или генерирует со стороны клиента)
 	if req.SessionUUID == "" {
 		req.SessionUUID = uuid.New().String()
 	}
-	log.Printf("SessionUUID: %s", req.SessionUUID)
+	log.Printf("[INFO] SessionUUID of client: %v : %s", r.RemoteAddr, req.SessionUUID)
 
 	if err := a.session.CreateSessionIfNotExists(r.Context(), req.SessionUUID); err != nil {
 		log.Printf("[WARN] failed to create session %s: %v", req.SessionUUID, err)
@@ -68,7 +67,7 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		log.Printf("[WARN] failed to encode response: %v", err)
 	}
-	log.Printf("POST /locate for Client %s is done", r.RemoteAddr)
+	log.Printf("[INFO] POST /locate for Client %s is done", r.RemoteAddr)
 }
 
 func (a *App) findLocation(ctx context.Context, cell models.Cell) (*models.Location, error) {
@@ -88,10 +87,14 @@ func (a *App) findLocation(ctx context.Context, cell models.Cell) (*models.Locat
 		return nil, fmt.Errorf("error in externalDB: %v", err)
 	}
 
-	//3. if found, then save it to UpdateDB(TODO: or LocateDB)
+	//3. if found in ExternalDB, save it to UpdateDB for enrichment
 	if loc != nil {
+		cellCopy := cell
+		locCopy := loc
 		go func() {
-			//_ = a.locateDB.SaveLTE
+			if err := a.updateDB.InsertCell(context.Background(), &cellCopy, locCopy, "external", nil); err != nil {
+				log.Printf("[WARN] failed to save cell from ExternalDB to UpdateDB: %v", err)
+			}
 		}()
 	}
 	return loc, nil

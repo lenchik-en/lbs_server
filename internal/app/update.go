@@ -47,7 +47,7 @@ func (a *App) insertToUpdate(ctx context.Context, req models.UpdateRequest, rawJ
 		return err
 	}
 
-	if err := a.updateDB.InsertCell(ctx, req.Cell, req.Location, rawJSON); err != nil {
+	if err := a.updateDB.InsertCell(context.Background(), req.Cell, req.Location, "client", rawJSON); err != nil {
 		return err
 	}
 	return nil

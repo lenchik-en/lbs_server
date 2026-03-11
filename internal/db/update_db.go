@@ -24,7 +24,7 @@ func NewUpdateDB(dsn string) (*UpdateDB, error) {
 	}, nil
 }
 
-func (u *UpdateDB) InsertCell(ctx context.Context, cell *models.Cell, loc *models.Location, rawJSON any) error {
+func (u *UpdateDB) InsertCell(ctx context.Context, cell *models.Cell, loc *models.Location, source string, rawJSON any) error {
 	data, err := json.Marshal(rawJSON)
 	if err != nil {
 		return err
@@ -36,31 +36,30 @@ func (u *UpdateDB) InsertCell(ctx context.Context, cell *models.Cell, loc *model
 		INSERT INTO cells
             (tech, mcc, mnc, tac, ci, pci, earfcn, lte_timing_advance, lte_age, lat, lon, source, raw)
         VALUES
-            ('LTE', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'client', $11)
-        ON CONFLICT DO NOTHING 
+            ('LTE', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT DO NOTHING
 		`
-		_, err := u.DB.ExecContext(ctx, query, cell.LTE.MCC, cell.LTE.MNC, cell.LTE.TAC, cell.LTE.CI, cell.LTE.PCI, cell.LTE.EARFCN, cell.LTE.TimingAdvance, cell.LTE.Age, loc.Point.Lat, loc.Point.Lon, data)
+		_, err := u.DB.ExecContext(ctx, query, cell.LTE.MCC, cell.LTE.MNC, cell.LTE.TAC, cell.LTE.CI, cell.LTE.PCI, cell.LTE.EARFCN, cell.LTE.TimingAdvance, cell.LTE.Age, loc.Point.Lat, loc.Point.Lon, source, data)
 		return err
 	case cell.GSM != nil:
 		query := `
 		INSERT INTO cells
             (tech, mcc, mnc, lac, cid, bsic, arfcn, gsm_timing_advance, gsm_age, lat, lon, source, raw)
         VALUES
-            ('GSM', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'client', $11)
-        ON CONFLICT DO NOTHING 
+            ('GSM', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT DO NOTHING
 		`
-
-		_, err := u.DB.ExecContext(ctx, query, cell.GSM.MCC, cell.GSM.MNC, cell.GSM.LAC, cell.GSM.CID, cell.GSM.BSIC, cell.GSM.ARFCN, cell.GSM.TimingAdvance, cell.GSM.Age, loc.Point.Lat, loc.Point.Lon, data)
+		_, err := u.DB.ExecContext(ctx, query, cell.GSM.MCC, cell.GSM.MNC, cell.GSM.LAC, cell.GSM.CID, cell.GSM.BSIC, cell.GSM.ARFCN, cell.GSM.TimingAdvance, cell.GSM.Age, loc.Point.Lat, loc.Point.Lon, source, data)
 		return err
 	case cell.WCDMA != nil:
 		query := `
 		INSERT INTO cells
             (tech, mcc, mnc, lac, cid, psc, uarfcn, wcdma_age, lat, lon, source, raw)
         VALUES
-            ('WCDMA', $1, $2, $3, $4, $5, $6, $7, $8, $9, 'client', $10)
-        ON CONFLICT DO NOTHING 
+            ('WCDMA', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT DO NOTHING
 		`
-		_, err := u.DB.ExecContext(ctx, query, cell.WCDMA.MCC, cell.WCDMA.MNC, cell.WCDMA.LAC, cell.WCDMA.CID, cell.WCDMA.PSC, cell.WCDMA.UARFCN, cell.WCDMA.Age, loc.Point.Lat, loc.Point.Lon, data)
+		_, err := u.DB.ExecContext(ctx, query, cell.WCDMA.MCC, cell.WCDMA.MNC, cell.WCDMA.LAC, cell.WCDMA.CID, cell.WCDMA.PSC, cell.WCDMA.UARFCN, cell.WCDMA.Age, loc.Point.Lat, loc.Point.Lon, source, data)
 		return err
 
 	default:
