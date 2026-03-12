@@ -9,6 +9,11 @@ import (
 	"github.com/lenchik-en/lbs_server/internal/models"
 )
 
+type CellInserter interface {
+	InsertCell(ctx context.Context, cell *models.Cell, loc *models.Location, source string, rawJSON any) error
+	GetConnection() *sql.DB
+}
+
 type UpdateDB struct {
 	DB *sql.DB
 }

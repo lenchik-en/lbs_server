@@ -52,7 +52,6 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if location == nil {
-		http.Error(w, "Location not found", http.StatusNotFound)
 		return
 	}
 
@@ -78,6 +77,7 @@ func (a *App) findLocation(ctx context.Context, cell models.Cell) (*models.Locat
 	}
 
 	if loc != nil {
+		log.Println("[INFO] location found in LocateDB")
 		return loc, nil
 	}
 
@@ -86,6 +86,7 @@ func (a *App) findLocation(ctx context.Context, cell models.Cell) (*models.Locat
 	if err != nil {
 		return nil, fmt.Errorf("error in externalDB: %v", err)
 	}
+	log.Println("[INFO] location found in ExternalDB")
 
 	//3. if found in ExternalDB, save it to UpdateDB for enrichment
 	if loc != nil {
@@ -95,6 +96,7 @@ func (a *App) findLocation(ctx context.Context, cell models.Cell) (*models.Locat
 			if err := a.updateDB.InsertCell(context.Background(), &cellCopy, locCopy, "external", nil); err != nil {
 				log.Printf("[WARN] failed to save cell from ExternalDB to UpdateDB: %v", err)
 			}
+			log.Println("[INFO] save cell from ExternalDB to UpdateDB")
 		}()
 	}
 	return loc, nil

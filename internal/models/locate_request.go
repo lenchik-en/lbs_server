@@ -57,10 +57,10 @@ type LTE struct {
 }
 
 type Wifi struct {
-	BSSID          int `json:"bssid"`
-	SignalStrength int `json:"signal_strength"`
-	CHANNEL        int `json:"channel"`
-	AGE            int `json:"age"`
+	BSSID          string `json:"bssid"`
+	SignalStrength int    `json:"signal_strength"`
+	CHANNEL        int    `json:"channel"`
+	AGE            int    `json:"age"`
 }
 
 type Ip struct {

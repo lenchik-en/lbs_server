@@ -15,6 +15,21 @@ type mockCellFinder struct {
 	getConnection func() *sql.DB
 }
 
+type mockUpdateDB struct {
+	insertCell func(ctx context.Context, cell *models.Cell, loc *models.Location, source string, rawJSON any) error
+}
+
+func (m *mockUpdateDB) InsertCell(ctx context.Context, cell *models.Cell, loc *models.Location, source string, rawJSON any) error {
+	if m.insertCell != nil {
+		return m.insertCell(ctx, cell, loc, source, rawJSON)
+	}
+	return nil
+}
+
+func (m *mockUpdateDB) GetConnection() *sql.DB {
+	return nil
+}
+
 func (m *mockCellFinder) FindLTE(ctx context.Context, lte *models.LTE) (*models.Location, error) {
 	if m.findLTE != nil {
 		return m.findLTE(ctx, lte)
@@ -52,6 +67,7 @@ func TestFindLocation(t *testing.T) {
 		name       string
 		locateDB   *mockCellFinder
 		externalDB *mockCellFinder
+		updateDB   *mockUpdateDB
 		cell       models.Cell
 		wantFound  bool
 		wantErr    bool
@@ -64,6 +80,7 @@ func TestFindLocation(t *testing.T) {
 				},
 			},
 			externalDB: &mockCellFinder{},
+			updateDB:   &mockUpdateDB{},
 			cell: models.Cell{
 				LTE: &models.LTE{MCC: 1},
 			},
@@ -81,6 +98,32 @@ func TestFindLocation(t *testing.T) {
 					return location, nil
 				},
 			},
+			updateDB: &mockUpdateDB{},
+			cell: models.Cell{
+				LTE: &models.LTE{MCC: 1},
+			},
+			wantFound: true,
+		},
+		{
+			name: "found in externalDB triggers save with source=external",
+			locateDB: &mockCellFinder{
+				findLTE: func(ctx context.Context, lte *models.LTE) (*models.Location, error) {
+					return nil, nil
+				},
+			},
+			externalDB: &mockCellFinder{
+				findLTE: func(ctx context.Context, lte *models.LTE) (*models.Location, error) {
+					return location, nil
+				},
+			},
+			updateDB: &mockUpdateDB{
+				insertCell: func(ctx context.Context, cell *models.Cell, loc *models.Location, source string, rawJSON any) error {
+					if source != "external" {
+						t.Errorf("expected source=external, got %s", source)
+					}
+					return nil
+				},
+			},
 			cell: models.Cell{
 				LTE: &models.LTE{MCC: 1},
 			},
@@ -90,6 +133,7 @@ func TestFindLocation(t *testing.T) {
 			name:       "not found anywhere",
 			locateDB:   &mockCellFinder{},
 			externalDB: &mockCellFinder{},
+			updateDB:   &mockUpdateDB{},
 			cell: models.Cell{
 				LTE: &models.LTE{MCC: 1},
 			},
@@ -103,6 +147,7 @@ func TestFindLocation(t *testing.T) {
 				},
 			},
 			externalDB: &mockCellFinder{},
+			updateDB:   &mockUpdateDB{},
 			cell: models.Cell{
 				LTE: &models.LTE{MCC: 1},
 			},
@@ -115,6 +160,7 @@ func TestFindLocation(t *testing.T) {
 			a := &App{
 				locateDB:   tt.locateDB,
 				externalDB: tt.externalDB,
+				updateDB:   tt.updateDB,
 			}
 
 			loc, err := a.findLocation(ctx, tt.cell)

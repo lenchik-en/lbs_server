@@ -12,11 +12,11 @@ import (
 type App struct {
 	locateDB   db.CellFinder
 	externalDB db.CellFinder
-	updateDB   *db.UpdateDB
+	updateDB   db.CellInserter
 	session    *db.Session
 }
 
-func (a *App) New(locate db.CellFinder, external db.CellFinder, update *db.UpdateDB) {
+func (a *App) New(locate db.CellFinder, external db.CellFinder, update db.CellInserter) {
 	a.locateDB = locate
 	a.externalDB = external
 	a.updateDB = update
@@ -33,17 +33,17 @@ func (a *App) Run() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect locateDB: %v", err)
 	}
- 
+
 	externalDB, err := db.NewExternalDB(cfg.EDBDSN)
 	if err != nil {
 		return fmt.Errorf("failed to connect externalDB: %v", err)
 	}
- 
+
 	updateDB, err := db.NewUpdateDB(cfg.UDBDSN)
 	if err != nil {
 		return fmt.Errorf("failed to connect updateDB: %v", err)
 	}
- 
+
 	a.New(locateDB, externalDB, updateDB)
 
 	return nil
@@ -57,7 +57,7 @@ func (a *App) CloseDBConnections() {
 		a.externalDB.GetConnection().Close()
 	}
 	if a.updateDB != nil {
-		a.updateDB.DB.Close()
+		a.updateDB.GetConnection().Close()
 	}
 }
 

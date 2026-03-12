@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/lenchik-en/lbs_server/internal/models"
@@ -23,10 +24,26 @@ func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
+
 	var req models.UpdateRequest
 	if err := json.Unmarshal(reqBody, &req); err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
+	}
+
+	if err := a.validateUpdate(req); err != nil {
+		http.Error(w, fmt.Sprintf("Validation error: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Если клиент передал sessionUUID — привязываем точку к сессии
+	if req.SessionUUID != "" {
+		if err := a.session.CreateSessionIfNotExists(r.Context(), req.SessionUUID); err != nil {
+			log.Printf("[WARN] failed to create session %s: %v", req.SessionUUID, err)
+		}
+		if err := a.session.SavePoint(r.Context(), req.SessionUUID, req.Location.Point.Lat, req.Location.Point.Lon, req.Location.Accuracy, "client", req, nil); err != nil {
+			log.Printf("[WARN] failed to save point for session %s: %v", req.SessionUUID, err)
+		}
 	}
 
 	if err := a.insertToUpdate(r.Context(), req, reqBody); err != nil {
@@ -39,45 +56,40 @@ func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("failed to encode response: %v", err), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("POST /update for Client %s is done", r.RemoteAddr)
+	log.Printf("[INFO] POST /update for Client %s is done", r.RemoteAddr)
 }
 
 func (a *App) insertToUpdate(ctx context.Context, req models.UpdateRequest, rawJSON any) error {
-	if err := a.validateUpdate(req); err != nil {
-		return err
+	for i := range req.Cell {
+		if err := a.updateDB.InsertCell(ctx, &req.Cell[i], req.Location, "client", rawJSON); err != nil {
+			return fmt.Errorf("failed to insert cell[%d]: %w", i, err)
+		}
 	}
 
-	if err := a.updateDB.InsertCell(context.Background(), req.Cell, req.Location, "client", rawJSON); err != nil {
-		return err
+	if len(req.Wifi) > 0 {
+		//todo: add insertWIFI
+		log.Printf("[INFO] wifi sources received (%d)", len(req.Wifi))
 	}
+
+	if len(req.IP) > 0 {
+		//todo: insert IP
+		log.Printf("[INFO] ip sources received (%d)", len(req.IP))
+	}
+
 	return nil
 }
 
 func (a *App) validateUpdate(req models.UpdateRequest) error {
-	source := 0
-	if req.Cell != nil {
-		if req.Cell.LTE == nil && req.Cell.GSM == nil && req.Cell.WCDMA == nil {
-			return fmt.Errorf("cell source provided but empty")
-		}
-		source++
-	}
-	if req.Wifi != nil {
-		source++
-	}
-	if req.IP != nil {
-		source++
-	}
-
-	if source != 1 {
-		return fmt.Errorf("only one source must be provided")
-	}
-
 	if req.Location == nil {
-		return fmt.Errorf("no location were provided")
+		return fmt.Errorf("no location provided")
 	}
-
 	if err := a.validateLocation(req.Location); err != nil {
 		return fmt.Errorf("invalid location: %v", err)
+	}
+
+	hasSource := len(req.Cell) > 0 || len(req.Wifi) > 0 || len(req.IP) > 0
+	if !hasSource {
+		return fmt.Errorf("at least one source (cell, wifi or ip) must be provided")
 	}
 
 	return nil
@@ -92,6 +104,17 @@ func (a *App) validateLocation(loc *models.Location) error {
 	}
 	if loc.Accuracy <= 0 {
 		return fmt.Errorf("accuracy must be positive")
+	}
+	return nil
+}
+
+func validateIP(i int, ip models.Ip) error {
+	p := fmt.Sprintf("ip[%d]", i)
+	if ip.Address == "" {
+		return fmt.Errorf("%s: address is required", p)
+	}
+	if net.ParseIP(ip.Address) == nil {
+		return fmt.Errorf("%s: invalid ip address", p)
 	}
 	return nil
 }
