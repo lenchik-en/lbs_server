@@ -10,13 +10,13 @@ import (
 )
 
 type App struct {
-	locateDB   db.CellFinder
+	locateDB   db.Finder
 	externalDB db.CellFinder
-	updateDB   db.CellInserter
-	session    *db.Session
+	updateDB   db.Inserter
+	session    db.SessionManager
 }
 
-func (a *App) New(locate db.CellFinder, external db.CellFinder, update db.CellInserter) {
+func (a *App) New(locate db.Finder, external db.CellFinder, update db.Inserter) {
 	a.locateDB = locate
 	a.externalDB = external
 	a.updateDB = update

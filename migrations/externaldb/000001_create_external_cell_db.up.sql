@@ -1,4 +1,4 @@
-CREATE TABLE cells
+CREATE TABLE IF NOT EXISTS cells
 (
     id       SERIAL PRIMARY KEY,
 
@@ -18,5 +18,5 @@ CREATE TABLE cells
     UNIQUE (radio, mcc, mnc, area, cell)
 );
 
-CREATE INDEX idx_cells_lookup
+CREATE INDEX IF NOT EXISTS idx_cells_lookup
     ON cells (radio, mcc, mnc, area, cell);

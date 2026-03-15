@@ -41,10 +41,24 @@ func NewLocateDB(dsn string) (*LocateDB, error) {
 func (l *LocateDB) GetConnection() *sql.DB { return l.DB }
 
 type CellFinder interface {
- 	FindLTE(ctx context.Context, lte *models.LTE) (*models.Location, error)
-	FindGSM(ctx context.Context, gse *models.GSM) (*models.Location, error)
+	FindLTE(ctx context.Context, lte *models.LTE) (*models.Location, error)
+	FindGSM(ctx context.Context, gsm *models.GSM) (*models.Location, error)
 	FindWCDMA(ctx context.Context, wcdma *models.WCDMA) (*models.Location, error)
 	GetConnection() *sql.DB
+}
+
+type WifiFinder interface {
+	FindWifi(ctx context.Context, wifi *models.Wifi) (*models.Location, error)
+}
+
+type IPFinder interface {
+	FindIP(ctx context.Context, ip *models.Ip) (*models.Location, error)
+}
+
+type Finder interface {
+	CellFinder
+	WifiFinder
+	IPFinder
 }
 
 func (l *LocateDB) FindLTE(ctx context.Context, lte *models.LTE) (*models.Location, error) {
@@ -70,9 +84,6 @@ func (l *LocateDB) FindLTE(ctx context.Context, lte *models.LTE) (*models.Locati
 
 		return nil, fmt.Errorf("error while row.Scan: %v", err)
 	}
-	//TODO:accuracy?
-	loc.Accuracy = 500
-
 	return &loc, nil
 }
 
@@ -99,9 +110,6 @@ func (l *LocateDB) FindGSM(ctx context.Context, gse *models.GSM) (*models.Locati
 
 		return nil, fmt.Errorf("error while row.Scan: %v", err)
 	}
-	//TODO:accuracy?
-	loc.Accuracy = 500
-
 	return &loc, nil
 }
 
@@ -128,8 +136,49 @@ func (l *LocateDB) FindWCDMA(ctx context.Context, wcdma *models.WCDMA) (*models.
 
 		return nil, fmt.Errorf("error while row.Scan: %v", err)
 	}
-	//TODO:accuracy?
-	loc.Accuracy = 500
+	return &loc, nil
+}
 
+func (l *LocateDB) FindWifi(ctx context.Context, wifi *models.Wifi) (*models.Location, error) {
+	const query = `
+		SELECT lat, lon
+		FROM wifi
+		WHERE bssid = $1
+		  AND lat IS NOT NULL
+		  AND lon IS NOT NULL
+		LIMIT 1
+	`
+
+	row := l.DB.QueryRowContext(ctx, query, wifi.BSSID)
+
+	var loc models.Location
+	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error while row.Scan: %v", err)
+	}
+	return &loc, nil
+}
+
+func (l *LocateDB) FindIP(ctx context.Context, ip *models.Ip) (*models.Location, error) {
+	const query = `
+		SELECT lat, lon
+		FROM ip
+		WHERE address = $1
+		  AND lat IS NOT NULL
+		  AND lon IS NOT NULL
+		LIMIT 1
+	`
+
+	row := l.DB.QueryRowContext(ctx, query, ip.Address)
+
+	var loc models.Location
+	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error while row.Scan: %v", err)
+	}
 	return &loc, nil
 }

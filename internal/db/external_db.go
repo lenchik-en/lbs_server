@@ -49,7 +49,6 @@ func (e *ExternalDB) FindLTE(ctx context.Context, lte *models.LTE) (*models.Loca
 		return nil, fmt.Errorf("error while row.Scan: %v", err)
 	}
 
-	loc.Accuracy = 500
 	return &loc, nil
 }
 
@@ -76,9 +75,6 @@ func (e *ExternalDB) FindGSM(ctx context.Context, gse *models.GSM) (*models.Loca
 
 		return nil, fmt.Errorf("error while row.Scan: %v", err)
 	}
-	//TODO:accuracy?
-	loc.Accuracy = 500
-
 	return &loc, nil
 }
 
@@ -105,9 +101,6 @@ func (e *ExternalDB) FindWCDMA(ctx context.Context, wcdma *models.WCDMA) (*model
 
 		return nil, fmt.Errorf("error while row.Scan: %v", err)
 	}
-	//TODO:accuracy?
-	loc.Accuracy = 500
-
 	return &loc, nil
 }
 

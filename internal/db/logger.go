@@ -7,6 +7,11 @@ import (
 	"fmt"
 )
 
+type SessionManager interface {
+	CreateSessionIfNotExists(ctx context.Context, sessionUUID string) error
+	SavePoint(ctx context.Context, sessionUUID string, lat, lon float64, accuracy int, source string, rawReq, rawResp interface{}) error
+}
+
 type Session struct {
 	db *sql.DB
 }
@@ -15,7 +20,6 @@ func NewLogger(db *sql.DB) *Session {
 	return &Session{db: db}
 }
 
-// CreateSessionIfNotExists - создает сессию, если ее нет
 func (s *Session) CreateSessionIfNotExists(ctx context.Context, sessionUUID string) error {
 	_, err := s.db.ExecContext(ctx,
 		`		

@@ -9,8 +9,10 @@ import (
 	"github.com/lenchik-en/lbs_server/internal/models"
 )
 
-type CellInserter interface {
+type Inserter interface {
 	InsertCell(ctx context.Context, cell *models.Cell, loc *models.Location, source string, rawJSON any) error
+	InsertWifi(ctx context.Context, wifi *models.Wifi, source string, rawJSON any) error
+	InsertIP(ctx context.Context, ip *models.Ip, source string, rawJSON any) error
 	GetConnection() *sql.DB
 }
 
@@ -66,10 +68,37 @@ func (u *UpdateDB) InsertCell(ctx context.Context, cell *models.Cell, loc *model
 		`
 		_, err := u.DB.ExecContext(ctx, query, cell.WCDMA.MCC, cell.WCDMA.MNC, cell.WCDMA.LAC, cell.WCDMA.CID, cell.WCDMA.PSC, cell.WCDMA.UARFCN, cell.WCDMA.Age, loc.Point.Lat, loc.Point.Lon, source, data)
 		return err
-
 	default:
 		return fmt.Errorf("unsupported cell type")
 	}
+}
+
+func (u *UpdateDB) InsertWifi(ctx context.Context, wifi *models.Wifi, source string, rawJSON any) error {
+	data, err := json.Marshal(rawJSON)
+	if err != nil {
+		return err
+	}
+
+	query := `
+		INSERT INTO wifi (bssid, signal_strength, channel, age, source, raw)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+	_, err = u.DB.ExecContext(ctx, query, wifi.BSSID, wifi.SignalStrength, wifi.CHANNEL, wifi.AGE, source, data)
+	return err
+}
+
+func (u *UpdateDB) InsertIP(ctx context.Context, ip *models.Ip, source string, rawJSON any) error {
+	data, err := json.Marshal(rawJSON)
+	if err != nil {
+		return err
+	}
+
+	query := `
+		INSERT INTO ip (address, source, raw)
+		VALUES ($1, $2, $3)
+	`
+	_, err = u.DB.ExecContext(ctx, query, ip.Address, source, data)
+	return err
 }
 
 func (u *UpdateDB) GetConnection() *sql.DB {

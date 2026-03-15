@@ -1,11 +1,11 @@
-CREATE TABLE sessions
+CREATE TABLE IF NOT EXISTS sessions
 (
     session_uuid UUID PRIMARY KEY, --идентификатор одной сессии
     started_at   TIMESTAMPTZ DEFAULT NOW(), --когда начали отправлять гео
     ended_at     TIMESTAMPTZ --когда закончили(!todo:уточнить, как понимать и надо ли вообще)
 );
 
-CREATE TABLE session_points
+CREATE TABLE IF NOT EXISTS session_points
 (
     id           BIGSERIAL PRIMARY KEY,
     session_uuid UUID REFERENCES sessions (session_uuid),

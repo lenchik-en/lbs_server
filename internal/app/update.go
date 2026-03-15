@@ -61,19 +61,21 @@ func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) insertToUpdate(ctx context.Context, req models.UpdateRequest, rawJSON any) error {
 	for i := range req.Cell {
-		if err := a.updateDB.InsertCell(ctx, &req.Cell[i], req.Location, "client", rawJSON); err != nil {
+		if err := a.updateDB.InsertCell(ctx, &req.Cell[i], req.Location, models.CLIENT, rawJSON); err != nil {
 			return fmt.Errorf("failed to insert cell[%d]: %w", i, err)
 		}
 	}
 
-	if len(req.Wifi) > 0 {
-		//todo: add insertWIFI
-		log.Printf("[INFO] wifi sources received (%d)", len(req.Wifi))
+	for i := range req.Wifi {
+		if err := a.updateDB.InsertWifi(ctx, &req.Wifi[i], models.CLIENT, rawJSON); err != nil {
+			return fmt.Errorf("failed to insert wifi[%d]: %w", i, err)
+		}
 	}
 
-	if len(req.IP) > 0 {
-		//todo: insert IP
-		log.Printf("[INFO] ip sources received (%d)", len(req.IP))
+	for i := range req.IP {
+		if err := a.updateDB.InsertIP(ctx, &req.IP[i], models.CLIENT, rawJSON); err != nil {
+			return fmt.Errorf("failed to insert ip[%d]: %w", i, err)
+		}
 	}
 
 	return nil
@@ -92,6 +94,25 @@ func (a *App) validateUpdate(req models.UpdateRequest) error {
 		return fmt.Errorf("at least one source (cell, wifi or ip) must be provided")
 	}
 
+	for i, cell := range req.Cell {
+		if err := validateCell(i, cell); err != nil {
+			return err
+		}
+	}
+
+	for i, ip := range req.IP {
+		if err := validateIP(i, ip); err != nil {
+			return fmt.Errorf("validateIP err: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func validateCell(i int, cell models.Cell) error {
+	if cell.LTE == nil && cell.GSM == nil && cell.WCDMA == nil {
+		return fmt.Errorf("cell[%d]: no radio type specified (lte, gsm or wcdma required)", i)
+	}
 	return nil
 }
 

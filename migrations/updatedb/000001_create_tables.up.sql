@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS wifi
 CREATE TABLE IF NOT EXISTS ip
 (
     id      SERIAL PRIMARY KEY,
-    address VARCHAR(17), --IPv4 или IPv6 адрес устройства
+    address VARCHAR(45), --IPv4 или IPv6 адрес устройства
     raw JSONB NOT NULL,
     source TEXT,
     created_at TIMESTAMP DEFAULT now()

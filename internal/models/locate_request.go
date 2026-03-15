@@ -1,12 +1,5 @@
 package models
 
-type Source string
-
-const (
-	EXTERNAL = "external"
-	LOCATE   = "locate"
-)
-
 type LocateRequest struct {
 	SessionUUID string `json:"sessionUUID"`
 	Cell        []Cell `json:"cell"`
