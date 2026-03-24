@@ -61,11 +61,11 @@ type Ip struct {
 }
 
 type Location struct {
-	Accuracy int
-	Source   Source
+	Accuracy int    `json:"accuracy"`
+	Source   Source `json:"source"`
 	Point
 }
 type Point struct {
-	Lat float64
-	Lon float64
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
 }
