@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/lenchik-en/lbs_server/internal/models"
 	_ "github.com/lib/pq"
@@ -16,7 +17,11 @@ func OpenPostgres(dsn string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to connect to the database: %v", err)
 	}
 
-	//TODO: is it necessary?
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetConnMaxIdleTime(time.Minute)
+
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %v", err)
 	}
@@ -63,7 +68,7 @@ type Finder interface {
 
 func (l *LocateDB) FindLTE(ctx context.Context, lte *models.LTE) (*models.Location, error) {
 	const query = `
-		SELECT lat, lon
+		SELECT lat, lon, from_metro
         FROM cells
         WHERE tech = 'LTE'
           AND mcc = $1
@@ -76,12 +81,10 @@ func (l *LocateDB) FindLTE(ctx context.Context, lte *models.LTE) (*models.Locati
 	row := l.DB.QueryRowContext(ctx, query, lte.MCC, lte.MNC, lte.TAC, lte.CI)
 
 	var loc models.Location
-	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon); err != nil {
+	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon, &loc.FromMetro); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			fmt.Printf("Query has no rows")
 			return nil, nil
 		}
-
 		return nil, fmt.Errorf("error while row.Scan: %v", err)
 	}
 	return &loc, nil
@@ -89,7 +92,7 @@ func (l *LocateDB) FindLTE(ctx context.Context, lte *models.LTE) (*models.Locati
 
 func (l *LocateDB) FindGSM(ctx context.Context, gse *models.GSM) (*models.Location, error) {
 	const query = `
-		SELECT lat, lon
+		SELECT lat, lon, from_metro
         FROM cells
         WHERE tech = 'GSM'
           AND mcc = $1
@@ -102,12 +105,10 @@ func (l *LocateDB) FindGSM(ctx context.Context, gse *models.GSM) (*models.Locati
 	row := l.DB.QueryRowContext(ctx, query, gse.MCC, gse.MNC, gse.LAC, gse.CID)
 
 	var loc models.Location
-	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon); err != nil {
+	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon, &loc.FromMetro); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			fmt.Printf("Query has no rows")
 			return nil, nil
 		}
-
 		return nil, fmt.Errorf("error while row.Scan: %v", err)
 	}
 	return &loc, nil
@@ -115,7 +116,7 @@ func (l *LocateDB) FindGSM(ctx context.Context, gse *models.GSM) (*models.Locati
 
 func (l *LocateDB) FindWCDMA(ctx context.Context, wcdma *models.WCDMA) (*models.Location, error) {
 	const query = `
-		SELECT lat, lon
+		SELECT lat, lon, from_metro
         FROM cells
         WHERE tech = 'WCDMA'
           AND mcc = $1
@@ -128,12 +129,10 @@ func (l *LocateDB) FindWCDMA(ctx context.Context, wcdma *models.WCDMA) (*models.
 	row := l.DB.QueryRowContext(ctx, query, wcdma.MCC, wcdma.MNC, wcdma.PSC, wcdma.CID)
 
 	var loc models.Location
-	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon); err != nil {
+	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon, &loc.FromMetro); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			fmt.Printf("Query has no rows")
 			return nil, nil
 		}
-
 		return nil, fmt.Errorf("error while row.Scan: %v", err)
 	}
 	return &loc, nil
@@ -181,4 +180,54 @@ func (l *LocateDB) FindIP(ctx context.Context, ip *models.Ip) (*models.Location,
 		return nil, fmt.Errorf("error while row.Scan: %v", err)
 	}
 	return &loc, nil
+}
+
+func (l *LocateDB) UpsertCell(row CellRefreshRow) error {
+	fromMetro := row.ObjectType.Valid && row.ObjectType.String == "metro"
+
+	const query = `
+		INSERT INTO cells (
+			tech, mcc, mnc, lac, tac, cid, ci, psc, pci,
+			arfcn, earfcn, uarfcn, bsic,
+			gsm_timing_advance, lte_timing_advance,
+			gsm_age, wcdma_age, lte_age,
+			lat, lon, from_metro
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9,
+			$10, $11, $12, $13,
+			$14, $15,
+			$16, $17, $18,
+			$19, $20, $21
+		)
+		ON CONFLICT (tech, mcc, mnc, COALESCE(lac, tac), COALESCE(cid, ci))
+		DO UPDATE SET lat = EXCLUDED.lat, lon = EXCLUDED.lon, from_metro = EXCLUDED.from_metro
+	`
+	_, err := l.DB.Exec(query,
+		row.Tech, row.MCC, row.MNC, row.LAC, row.TAC, row.CID, row.CI, row.PSC, row.PCI,
+		row.ARFCN, row.EARFCN, row.UARFCN, row.BSIC,
+		row.GSMTimingAdvance, row.LTETimingAdvance,
+		row.GSMAge, row.WCDMAAge, row.LTEAge,
+		row.Lat, row.Lon, fromMetro,
+	)
+	return err
+}
+
+func (l *LocateDB) UpsertWifi(row WifiRefreshRow) error {
+	const query = `
+		INSERT INTO wifi (bssid, lat, lon)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (bssid) DO UPDATE SET lat = EXCLUDED.lat, lon = EXCLUDED.lon
+	`
+	_, err := l.DB.Exec(query, row.BSSID, row.Lat, row.Lon)
+	return err
+}
+
+func (l *LocateDB) UpsertIP(row IPRefreshRow) error {
+	const query = `
+		INSERT INTO ip (address, lat, lon)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (address) DO UPDATE SET lat = EXCLUDED.lat, lon = EXCLUDED.lon
+	`
+	_, err := l.DB.Exec(query, row.Address, row.Lat, row.Lon)
+	return err
 }

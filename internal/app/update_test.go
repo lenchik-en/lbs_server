@@ -139,6 +139,118 @@ func TestValidateUpdate(t *testing.T) {
 			req:     models.UpdateRequest{IP: []models.Ip{{Address: "1.2.3.4"}}, Location: validLocation()},
 			wantErr: false,
 		},
+		// Тип объекта
+		{
+			name:    "valid type metro",
+			req:     models.UpdateRequest{Cell: []models.Cell{validLTECell()}, Location: validLocation(), Type: models.ObjectTypeMetro},
+			wantErr: false,
+		},
+		{
+			name:    "valid type building",
+			req:     models.UpdateRequest{Cell: []models.Cell{validLTECell()}, Location: validLocation(), Type: models.ObjectTypeBuilding},
+			wantErr: false,
+		},
+		{
+			name:    "valid type street",
+			req:     models.UpdateRequest{Cell: []models.Cell{validLTECell()}, Location: validLocation(), Type: models.ObjectTypeStreet},
+			wantErr: false,
+		},
+		{
+			name:    "invalid type value",
+			req:     models.UpdateRequest{Cell: []models.Cell{validLTECell()}, Location: validLocation(), Type: "parking"},
+			wantErr: true,
+		},
+		// Граничные координаты
+		{
+			name: "boundary lat=-90 valid",
+			req: models.UpdateRequest{
+				Cell:     []models.Cell{validLTECell()},
+				Location: &models.Location{Point: models.Point{Lat: -90, Lon: 0}, Accuracy: 10},
+			},
+			wantErr: false,
+		},
+		{
+			name: "boundary lat=90 valid",
+			req: models.UpdateRequest{
+				Cell:     []models.Cell{validLTECell()},
+				Location: &models.Location{Point: models.Point{Lat: 90, Lon: 0}, Accuracy: 10},
+			},
+			wantErr: false,
+		},
+		{
+			name: "boundary lon=-180 valid",
+			req: models.UpdateRequest{
+				Cell:     []models.Cell{validLTECell()},
+				Location: &models.Location{Point: models.Point{Lat: 0, Lon: -180}, Accuracy: 10},
+			},
+			wantErr: false,
+		},
+		{
+			name: "boundary lon=180 valid",
+			req: models.UpdateRequest{
+				Cell:     []models.Cell{validLTECell()},
+				Location: &models.Location{Point: models.Point{Lat: 0, Lon: 180}, Accuracy: 10},
+			},
+			wantErr: false,
+		},
+		{
+			name: "lat just above max",
+			req: models.UpdateRequest{
+				Cell:     []models.Cell{validLTECell()},
+				Location: &models.Location{Point: models.Point{Lat: 90.0001, Lon: 0}, Accuracy: 10},
+			},
+			wantErr: true,
+		},
+		{
+			name: "lon just below min",
+			req: models.UpdateRequest{
+				Cell:     []models.Cell{validLTECell()},
+				Location: &models.Location{Point: models.Point{Lat: 0, Lon: -180.0001}, Accuracy: 10},
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative accuracy",
+			req: models.UpdateRequest{
+				Cell:     []models.Cell{validLTECell()},
+				Location: &models.Location{Point: models.Point{Lat: 55.75, Lon: 37.61}, Accuracy: -1},
+			},
+			wantErr: true,
+		},
+		{
+			name: "accuracy=1 minimum valid",
+			req: models.UpdateRequest{
+				Cell:     []models.Cell{validLTECell()},
+				Location: &models.Location{Point: models.Point{Lat: 55.75, Lon: 37.61}, Accuracy: 1},
+			},
+			wantErr: false,
+		},
+		// IP validation в составе запроса
+		{
+			name: "invalid ip in request",
+			req: models.UpdateRequest{
+				IP:       []models.Ip{{Address: "999.999.999.999"}},
+				Location: validLocation(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty ip address in request",
+			req: models.UpdateRequest{
+				IP:       []models.Ip{{Address: ""}},
+				Location: validLocation(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "mixed valid cell and invalid ip",
+			req: models.UpdateRequest{
+				Cell:     []models.Cell{validLTECell()},
+				IP:       []models.Ip{{Address: "bad-ip"}},
+				Location: validLocation(),
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

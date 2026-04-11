@@ -61,28 +61,28 @@ func (m *mockFinder) FindIP(ctx context.Context, ip *models.Ip) (*models.Locatio
 
 // mockUpdateDB реализует db.Inserter.
 type mockUpdateDB struct {
-	insertCell func(ctx context.Context, cell *models.Cell, loc *models.Location, source string, rawJSON any) error
-	insertWifi func(ctx context.Context, wifi *models.Wifi, source string, rawJSON any) error
-	insertIP   func(ctx context.Context, ip *models.Ip, source string, rawJSON any) error
+	insertCell func(ctx context.Context, cell *models.Cell, loc *models.Location, source, objectType string, rawJSON any) error
+	insertWifi func(ctx context.Context, wifi *models.Wifi, loc *models.Location, source, objectType string, rawJSON any) error
+	insertIP   func(ctx context.Context, ip *models.Ip, loc *models.Location, source, objectType string, rawJSON any) error
 }
 
-func (m *mockUpdateDB) InsertCell(ctx context.Context, cell *models.Cell, loc *models.Location, source string, rawJSON any) error {
+func (m *mockUpdateDB) InsertCell(ctx context.Context, cell *models.Cell, loc *models.Location, source, objectType string, rawJSON any) error {
 	if m.insertCell != nil {
-		return m.insertCell(ctx, cell, loc, source, rawJSON)
+		return m.insertCell(ctx, cell, loc, source, objectType, rawJSON)
 	}
 	return nil
 }
 
-func (m *mockUpdateDB) InsertWifi(ctx context.Context, wifi *models.Wifi, source string, rawJSON any) error {
+func (m *mockUpdateDB) InsertWifi(ctx context.Context, wifi *models.Wifi, loc *models.Location, source, objectType string, rawJSON any) error {
 	if m.insertWifi != nil {
-		return m.insertWifi(ctx, wifi, source, rawJSON)
+		return m.insertWifi(ctx, wifi, loc, source, objectType, rawJSON)
 	}
 	return nil
 }
 
-func (m *mockUpdateDB) InsertIP(ctx context.Context, ip *models.Ip, source string, rawJSON any) error {
+func (m *mockUpdateDB) InsertIP(ctx context.Context, ip *models.Ip, loc *models.Location, source, objectType string, rawJSON any) error {
 	if m.insertIP != nil {
-		return m.insertIP(ctx, ip, source, rawJSON)
+		return m.insertIP(ctx, ip, loc, source, objectType, rawJSON)
 	}
 	return nil
 }
@@ -254,7 +254,7 @@ func TestFindCellLocation(t *testing.T) {
 				},
 			},
 			updateDB: &mockUpdateDB{
-				insertCell: func(_ context.Context, _ *models.Cell, _ *models.Location, source string, _ any) error {
+				insertCell: func(_ context.Context, _ *models.Cell, _ *models.Location, source, _ string, _ any) error {
 					if source != "external" {
 						t.Errorf("expected source=external, got %s", source)
 					}
@@ -496,6 +496,73 @@ func TestSearchBySource(t *testing.T) {
 			wantLat:      55.7650,
 			wantAccuracy: 100,
 		},
+		{
+			// Вышка из метро: WiFi запрашивается, но результат игнорируется.
+			// Возвращается cell-координата с accuracy=1000.
+			name: "metro cell — wifi result ignored",
+			locateDB: &mockFinder{
+				mockCellFinder: mockCellFinder{
+					findLTE: func(_ context.Context, _ *models.LTE) (*models.Location, error) {
+						loc := newLoc(55.7558, 37.6173)
+						loc.FromMetro = true
+						return loc, nil
+					},
+				},
+				findWifi: func(_ context.Context, _ *models.Wifi) (*models.Location, error) {
+					// WiFi рядом — но должен быть проигнорирован из-за metro флага
+					return newLoc(55.7559, 37.6174), nil
+				},
+			},
+			updateDB: &mockUpdateDB{},
+			req: models.LocateRequest{
+				Cell: []models.Cell{{LTE: &models.LTE{MCC: 1}}},
+				Wifi: []models.Wifi{{BSSID: "aa:bb:cc:dd:ee:ff"}},
+			},
+			wantLat:      55.7558, // cell, не wifi
+			wantAccuracy: 1000,
+		},
+		{
+			// Из нескольких cells берём первую найденную
+			name: "multiple cells — first found wins",
+			locateDB: &mockFinder{
+				mockCellFinder: mockCellFinder{
+					findGSM: func(_ context.Context, gsm *models.GSM) (*models.Location, error) {
+						if gsm.CID == 111 {
+							return newLoc(10.0, 20.0), nil
+						}
+						t.Errorf("unexpected GSM CID: %d", gsm.CID)
+						return nil, nil
+					},
+				},
+			},
+			updateDB: &mockUpdateDB{},
+			req: models.LocateRequest{
+				Cell: []models.Cell{
+					{GSM: &models.GSM{CID: 111}},
+					{GSM: &models.GSM{CID: 222}}, // не должна дойти
+				},
+			},
+			wantLat:      10.0,
+			wantAccuracy: 1000,
+		},
+		{
+			// sessionUUID из запроса сохраняется в ответе
+			name: "sessionUUID from request preserved in response",
+			locateDB: &mockFinder{
+				mockCellFinder: mockCellFinder{
+					findLTE: func(_ context.Context, _ *models.LTE) (*models.Location, error) {
+						return newLoc(55.0, 37.0), nil
+					},
+				},
+			},
+			updateDB: &mockUpdateDB{},
+			req: models.LocateRequest{
+				SessionUUID: "my-fixed-uuid",
+				Cell:        []models.Cell{{LTE: &models.LTE{MCC: 1}}},
+			},
+			wantLat:      55.0,
+			wantAccuracy: 1000,
+		},
 	}
 
 	for _, tt := range tests {
@@ -530,6 +597,10 @@ func TestSearchBySource(t *testing.T) {
 			}
 			if resp.SessionUUID == "" {
 				t.Error("expected non-empty SessionUUID")
+			}
+			// Если запрос содержал конкретный UUID — он должен сохраниться
+			if tt.req.SessionUUID != "" && resp.SessionUUID != tt.req.SessionUUID {
+				t.Errorf("expected sessionUUID=%q, got %q", tt.req.SessionUUID, resp.SessionUUID)
 			}
 		})
 	}

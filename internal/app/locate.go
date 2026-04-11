@@ -41,6 +41,11 @@ func (a *App) HandleLocate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	apiKey := r.Header.Get("X-Api-Key")
+	if !a.checkRateLimit(w, "locate", apiKey, req.SessionUUID) {
+		return
+	}
+
 	resp, err := a.findLocation(r.Context(), &req)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to find location: %v", err), http.StatusInternalServerError)
@@ -76,6 +81,16 @@ func (a *App) findLocation(ctx context.Context, req *models.LocateRequest) (*Loc
 		return nil, nil
 	}
 
+	// TODO: Movement filter (stub for future implementation).
+	// Validate that the new location is physically reachable from the previous
+	// session point. This is important for clients not running Aurora OS, where
+	// the geo-stack already performs this check.
+	// Steps:
+	//   1. lastPt, err := a.session.GetLastPoint(ctx, req.SessionUUID)
+	//   2. timeDelta := location.Timestamp.Sub(lastPt.Timestamp)
+	//   3. dist := geo.HaversineDistance(lastPt.Lat, lastPt.Lon, location.Point.Lat, location.Point.Lon)
+	//   4. if dist > maxSpeedMs * timeDelta.Milliseconds() → reject or flag the point
+
 	if err := a.session.SavePoint(ctx, req.SessionUUID, location.Point.Lat, location.Point.Lon, location.Accuracy, models.EXTERNAL, *req, location); err != nil {
 		log.Printf("[WARN] failed to save point for session %s: %v", req.SessionUUID, err)
 	}
@@ -101,6 +116,13 @@ func (a *App) searchBySource(ctx context.Context, req *models.LocateRequest) (*m
 	wifiLoc, err := a.findWifi(ctx, req.Wifi)
 	if err != nil {
 		return nil, fmt.Errorf("wifi: %w", err)
+	}
+
+	// Если вышка из метро — WiFi игнорируем
+	if cellLoc != nil && cellLoc.FromMetro {
+		cellLoc.Accuracy = int(defaultCellAccuracy)
+		log.Printf("[INFO] metro cell detected, skipping WiFi")
+		return cellLoc, nil
 	}
 
 	// WiFi подтверждает Cell?
@@ -199,8 +221,10 @@ func (a *App) findCellLocation(ctx context.Context, cell models.Cell) (*models.L
 		log.Println("[INFO] location found in ExternalDB")
 		cellCopy := cell
 		locCopy := loc
+		a.wg.Add(1)
 		go func() {
-			if err := a.updateDB.InsertCell(context.Background(), &cellCopy, locCopy, models.EXTERNAL, nil); err != nil {
+			defer a.wg.Done()
+			if err := a.updateDB.InsertCell(context.Background(), &cellCopy, locCopy, models.EXTERNAL, "", nil); err != nil {
 				log.Printf("[WARN] failed to save cell from ExternalDB to UpdateDB: %v", err)
 			}
 			log.Println("[INFO] save cell from ExternalDB to UpdateDB")

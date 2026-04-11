@@ -36,6 +36,16 @@ func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	apiKey := r.Header.Get("X-Api-Key")
+	if !a.checkRateLimit(w, "update", apiKey, req.SessionUUID) {
+		return
+	}
+
+	// TODO: Movement filter (stub for future implementation).
+	// If req.SessionUUID != "", validate req.Location against the last session
+	// point to detect physically impossible movements before inserting to UpdateDB.
+	// See locate.go findLocation for the algorithm outline.
+
 	// Если клиент передал sessionUUID — привязываем точку к сессии
 	if req.SessionUUID != "" {
 		if err := a.session.CreateSessionIfNotExists(r.Context(), req.SessionUUID); err != nil {
@@ -60,20 +70,22 @@ func (a *App) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) insertToUpdate(ctx context.Context, req models.UpdateRequest, rawJSON any) error {
+	objType := string(req.Type)
+
 	for i := range req.Cell {
-		if err := a.updateDB.InsertCell(ctx, &req.Cell[i], req.Location, models.CLIENT, rawJSON); err != nil {
+		if err := a.updateDB.InsertCell(ctx, &req.Cell[i], req.Location, models.CLIENT, objType, rawJSON); err != nil {
 			return fmt.Errorf("failed to insert cell[%d]: %w", i, err)
 		}
 	}
 
 	for i := range req.Wifi {
-		if err := a.updateDB.InsertWifi(ctx, &req.Wifi[i], models.CLIENT, rawJSON); err != nil {
+		if err := a.updateDB.InsertWifi(ctx, &req.Wifi[i], req.Location, models.CLIENT, objType, rawJSON); err != nil {
 			return fmt.Errorf("failed to insert wifi[%d]: %w", i, err)
 		}
 	}
 
 	for i := range req.IP {
-		if err := a.updateDB.InsertIP(ctx, &req.IP[i], models.CLIENT, rawJSON); err != nil {
+		if err := a.updateDB.InsertIP(ctx, &req.IP[i], req.Location, models.CLIENT, objType, rawJSON); err != nil {
 			return fmt.Errorf("failed to insert ip[%d]: %w", i, err)
 		}
 	}
@@ -87,6 +99,15 @@ func (a *App) validateUpdate(req models.UpdateRequest) error {
 	}
 	if err := a.validateLocation(req.Location); err != nil {
 		return fmt.Errorf("invalid location: %v", err)
+	}
+
+	if req.Type != "" {
+		switch req.Type {
+		case models.ObjectTypeMetro, models.ObjectTypeBuilding, models.ObjectTypeStreet:
+			// valid
+		default:
+			return fmt.Errorf("invalid type %q: must be metro, building or street", req.Type)
+		}
 	}
 
 	hasSource := len(req.Cell) > 0 || len(req.Wifi) > 0 || len(req.IP) > 0

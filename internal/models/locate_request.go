@@ -61,8 +61,9 @@ type Ip struct {
 }
 
 type Location struct {
-	Accuracy int    `json:"accuracy"`
-	Source   Source `json:"source"`
+	Accuracy  int    `json:"accuracy"`
+	Source    Source `json:"source"`
+	FromMetro bool   `json:"-"` // внутренний флаг, не отдаётся клиенту
 	Point
 }
 type Point struct {

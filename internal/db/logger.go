@@ -59,7 +59,8 @@ func (s *Session) SavePoint(ctx context.Context, sessionUUID string, lat float64
 			raw_request,
 			raw_response
 		)
-		VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7);
+		VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7)
+        ON CONFLICT DO NOTHING;
 	`,
 		sessionUUID,
 		lat,
