@@ -7,14 +7,15 @@ import (
 	"github.com/lenchik-en/lbs_server/internal/service"
 )
 
-// RequireAPIKey проверяет X-Api-Key если require=true.
+// RequireAPIKey проверяет X-Api-Key если requireFn() == true.
+// requireFn вызывается на каждый запрос — позволяет менять настройку динамически через UI.
 // При require=false пропускает запросы без ключа, но валидирует если ключ передан.
-func RequireAPIKey(svc *service.APIKeyService, scope model.KeyScope, require bool) func(http.Handler) http.Handler {
+func RequireAPIKey(svc *service.APIKeyService, scope model.KeyScope, requireFn func() bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("X-Api-Key")
 			if key == "" {
-				if require {
+				if requireFn() {
 					http.Error(w, "X-Api-Key required", http.StatusUnauthorized)
 					return
 				}

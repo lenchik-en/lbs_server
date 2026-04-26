@@ -1,0 +1,22 @@
+{{template "layout" .}}
+{{define "content"}}
+<div style="max-width:360px;margin:80px auto;">
+    <div class="card">
+        <h1 style="text-align:center;margin-bottom:24px;">Вход в панель</h1>
+        {{if .Error}}
+        <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+        <form method="POST" action="/admin/login">
+            <div class="form-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+                <label for="login">Логин</label>
+                <input type="text" id="login" name="login" required autofocus style="width:100%">
+            </div>
+            <div class="form-row" style="flex-direction:column;align-items:stretch;gap:8px;margin-top:12px;">
+                <label for="password">Пароль</label>
+                <input type="password" id="password" name="password" required style="width:100%">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:20px;">Войти</button>
+        </form>
+    </div>
+</div>
+{{end}}

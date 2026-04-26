@@ -25,6 +25,15 @@ type Config struct {
 	// Refresh: период автоматической перекачки UpdateDB → LocateDB, мс.
 	// 0 = авто-refresh отключён, только ручной через POST /refresh.
 	RefreshPeriodMs int
+
+	// Проверка API-ключей: если true — запросы без ключа отклоняются.
+	RequireKeyLocate bool
+	RequireKeyUpdate bool
+
+	// Учётные данные админа.
+	// ADMIN_PASSWORD_HASH — bcrypt-хэш пароля (генерируется: htpasswd -bnBC 10 "" pass | tr -d ':\n').
+	AdminLogin        string
+	AdminPasswordHash string
 }
 
 func Load() (*Config, error) {
@@ -40,6 +49,14 @@ func Load() (*Config, error) {
 		UpdateMinPeriodUUID:    envInt("UPDATE_MIN_PERIOD_UUID"),
 		UpdateMinPeriodKeyUUID: envInt("UPDATE_MIN_PERIOD_KEY_UUID"),
 		RefreshPeriodMs:        envInt("REFRESH_PERIOD_MS"),
+		RequireKeyLocate:       os.Getenv("REQUIRE_KEY_LOCATE") == "true",
+		RequireKeyUpdate:       os.Getenv("REQUIRE_KEY_UPDATE") == "true",
+		AdminLogin:             os.Getenv("ADMIN_LOGIN"),
+		AdminPasswordHash:      os.Getenv("ADMIN_PASSWORD_HASH"),
+	}
+
+	if cfg.AdminLogin == "" || cfg.AdminPasswordHash == "" {
+		return nil, fmt.Errorf("ADMIN_LOGIN and ADMIN_PASSWORD_HASH must be set")
 	}
 
 	if cfg.HTTPAddr == "" {

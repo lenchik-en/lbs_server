@@ -8,78 +8,86 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/lenchik-en/lbs_server/internal/app"
+	"github.com/lenchik-en/lbs_server/internal/api"
+	"github.com/lenchik-en/lbs_server/internal/config"
+	"github.com/lenchik-en/lbs_server/internal/ratelimit"
+	"github.com/lenchik-en/lbs_server/internal/repository/postgres"
+	"github.com/lenchik-en/lbs_server/internal/service"
 )
 
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 func main() {
-	// godotenv используется для локальной разработки без Docker.
-	// В контейнере переменные уже инжектируются через env_file в docker-compose,
-	// поэтому ошибку отсутствия файла .env игнорируем.
-	//if err := godotenv.Load(".env"); err != nil {
-	//	log.Println("no .env file found, using environment variables")
-	//}
-
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	app := &app.App{}
-
-	if err := app.Run(); err != nil {
-		log.Fatalf("failed to run app: %v", err)
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("config: %v", err)
 	}
 
-	if err := app.LoadDemoCells(ctx); err != nil {
-		log.Printf("[WARN] demo cells not loaded: %v", err)
+	// --- репозитории ---
+	locateRepo, err := postgres.NewLocateRepo(cfg.DBDSN)
+	if err != nil {
+		log.Fatalf("locateRepo: %v", err)
+	}
+	externalRepo, err := postgres.NewExternalRepo(cfg.EDBDSN)
+	if err != nil {
+		log.Fatalf("externalRepo: %v", err)
+	}
+	updateRepo, err := postgres.NewUpdateRepo(cfg.UDBDSN)
+	if err != nil {
+		log.Fatalf("updateRepo: %v", err)
 	}
 
-	app.StartBackground(ctx)
+	// SessionRepo живёт в LocateDB (там же sessions/session_points)
+	sessionRepo := postgres.NewSessionRepo(locateRepo.DB())
+	apiKeyRepo := postgres.NewAPIKeyRepo(locateRepo.DB())
 
-	//todo: закинуть в Run
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", app.HandleHealth)
-	mux.HandleFunc("/locate", app.HandleLocate)
-	mux.HandleFunc("/update", app.HandleUpdate)
-	mux.HandleFunc("/refresh", app.HandleRefresh)
-	mux.HandleFunc("/demo/cells", app.HandleDemoCells)
+	// --- сервисы ---
+	wg := &service.WaitGroupAdapter{}
+
+	locateSvc := service.NewLocateService(locateRepo, externalRepo, updateRepo, sessionRepo, wg)
+	updateSvc := service.NewUpdateService(updateRepo, sessionRepo)
+	refreshSvc := service.NewRefreshService(updateRepo, locateRepo)
+	apiKeySvc := service.NewAPIKeyService(apiKeyRepo)
+	adminSvc := service.NewAdminService(cfg.AdminLogin, cfg.AdminPasswordHash, service.Settings{
+		RequireKeyLocate: cfg.RequireKeyLocate,
+		RequireKeyUpdate: cfg.RequireKeyUpdate,
+		RefreshPeriodMs:  cfg.RefreshPeriodMs,
+	})
+
+	// --- авто-refresh (период берём из AdminService — он может меняться через UI) ---
+	refreshSvc.StartAutoRefresh(ctx, cfg.RefreshPeriodMs)
+
+	// --- HTTP ---
+	limiter := ratelimit.New()
+	mux := api.NewMux(adminSvc, limiter, locateSvc, updateSvc, refreshSvc, apiKeySvc)
 
 	server := &http.Server{
-		Addr:         app.Addr(),
-		Handler:      corsMiddleware(mux),
+		Addr:         cfg.HTTPAddr,
+		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
 	go func() {
-		log.Println("Starting server on :8080")
+		log.Printf("Starting server on %s", cfg.HTTPAddr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("could not listen on :8080: %v\n", err)
+			log.Fatalf("listen: %v", err)
 		}
 	}()
 
 	<-ctx.Done()
+	log.Println("Shutting down...")
 
-	log.Println("Shutting down server...")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("server forced to shutdown: %v", err)
+		log.Fatalf("shutdown: %v", err)
 	}
 
-	app.Shutdown()
+	wg.Wait()
+	limiter.Stop()
 	log.Println("Server stopped")
 }

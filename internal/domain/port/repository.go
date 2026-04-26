@@ -20,7 +20,6 @@ type ExternalRepository interface {
 	FindLTE(ctx context.Context, lte *model.LTE) (*model.Location, error)
 	FindGSM(ctx context.Context, gsm *model.GSM) (*model.Location, error)
 	FindWCDMA(ctx context.Context, wcdma *model.WCDMA) (*model.Location, error)
-	FetchSampleCells(ctx context.Context, limit int) ([]model.LocateRequest, error)
 }
 
 // UpdateRepository — запись данных от клиентов в UpdateDB.

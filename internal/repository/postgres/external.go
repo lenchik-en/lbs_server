@@ -48,41 +48,6 @@ func (r *ExternalRepo) FindWCDMA(ctx context.Context, wcdma *model.WCDMA) (*mode
 	return r.scan(r.db.QueryRowContext(ctx, query, wcdma.MCC, wcdma.MNC, wcdma.LAC, wcdma.CID))
 }
 
-func (r *ExternalRepo) FetchSampleCells(ctx context.Context, limit int) ([]model.LocateRequest, error) {
-	const query = `
-		SELECT radio, mcc, mnc, area, cell
-		FROM cells
-		WHERE lat IS NOT NULL AND lon IS NOT NULL
-		LIMIT $1
-	`
-	rows, err := r.db.QueryContext(ctx, query, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var result []model.LocateRequest
-	for rows.Next() {
-		var radio, mcc, mnc, area, cell int
-		if err := rows.Scan(&radio, &mcc, &mnc, &area, &cell); err != nil {
-			continue
-		}
-		var req model.LocateRequest
-		switch radio {
-		case 1:
-			req.Cell = []model.Cell{{GSM: &model.GSM{MCC: mcc, MNC: mnc, LAC: area, CID: cell}}}
-		case 2:
-			req.Cell = []model.Cell{{WCDMA: &model.WCDMA{MCC: mcc, MNC: mnc, LAC: area, CID: cell}}}
-		case 3:
-			req.Cell = []model.Cell{{LTE: &model.LTE{MCC: mcc, MNC: mnc, TAC: area, CI: cell}}}
-		default:
-			continue
-		}
-		result = append(result, req)
-	}
-	return result, rows.Err()
-}
-
 func (r *ExternalRepo) scan(row *sql.Row) (*model.Location, error) {
 	var loc model.Location
 	if err := row.Scan(&loc.Point.Lat, &loc.Point.Lon); err != nil {
