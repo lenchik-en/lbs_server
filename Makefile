@@ -1,8 +1,6 @@
 SERVER_URL=http://localhost:8080
 
-.PHONY: locate_test run all migrate-all migrate-external migrate-locate migrate-update psql-external psql-locate psql-update clean stop
-
-all: locate_test
+.PHONY: run all migrate-all migrate-external migrate-locate migrate-update psql-external psql-locate psql-update clean stop
 
 run:
 	docker compose up --build
@@ -11,9 +9,6 @@ locate_test: run
 	curl -X POST $(SERVER_URL)/locate \
        -H "Content-Type: application/json" -d '{ "sessionUUID": "11111111-2222-3333-4444-555555555555", "cell": [ {"lte": {"mcc": 310,"mnc": 404,"tac": 1,"ci": 5632016 }}],"wifi": []}'
 
-# =========================
-# Миграции и работа с бд
-# =========================
 PSQL=psql
 MIGRATIONS_DIR=./migrations
 
@@ -33,6 +28,8 @@ migrate-locate:
 migrate-update:
 	@echo "Applying migrations to UpdateDB..."
 	$(PSQL) "$(UPDATE_DB_URL)" -f $(MIGRATIONS_DIR)/updatedb/000001_create_tables.up.sql
+	$(PSQL) "$(UPDATE_DB_URL)" -f $(MIGRATIONS_DIR)/updatedb/000002_add_coordinates_to_wifi_ip.up.sql
+	$(PSQL) "$(UPDATE_DB_URL)" -f $(MIGRATIONS_DIR)/updatedb/000003_add_type.up.sql
 	@echo "UpdateDB migrations applied."
 
 migrate-external:
