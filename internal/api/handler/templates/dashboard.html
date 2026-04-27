@@ -1,0 +1,47 @@
+{{template "layout" .}}
+{{define "content"}}
+<h1>Настройки сервера</h1>
+
+{{if .Flash}}
+<div class="alert alert-success">{{.Flash}}</div>
+{{end}}
+
+<div class="card">
+    <h2>API-ключи</h2>
+    <form method="POST" action="/admin/settings">
+        <div class="form-row">
+            <label>Требовать ключ для /locate</label>
+            <input type="checkbox" name="require_key_locate" {{if .Settings.RequireKeyLocate}}checked{{end}}>
+        </div>
+        <div class="form-row">
+            <label>Требовать ключ для /update</label>
+            <input type="checkbox" name="require_key_update" {{if .Settings.RequireKeyUpdate}}checked{{end}}>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:8px;">Сохранить</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Refresh</h2>
+    <form method="POST" action="/admin/settings" style="display:inline">
+        <input type="hidden" name="require_key_locate" value="{{if .Settings.RequireKeyLocate}}on{{end}}">
+        <input type="hidden" name="require_key_update" value="{{if .Settings.RequireKeyUpdate}}on{{end}}">
+        <div class="form-row">
+            <label>Период авто-refresh (мс, 0 = выключен)</label>
+            <input type="number" name="refresh_period_ms" value="{{.Settings.RefreshPeriodMs}}" min="0" style="width:120px">
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:8px;">Сохранить</button>
+    </form>
+
+    <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;">
+        <form method="POST" action="/admin/refresh" style="display:inline">
+            <button type="submit" class="btn btn-success">▶ Запустить refresh вручную</button>
+        </form>
+        {{if .RefreshResult}}
+        <span style="margin-left:16px;font-size:14px;color:#555;">
+            Ячеек: {{.RefreshResult.CellsUpserted}} / WiFi: {{.RefreshResult.WifisUpserted}} / IP: {{.RefreshResult.IPsUpserted}}
+        </span>
+        {{end}}
+    </div>
+</div>
+{{end}}

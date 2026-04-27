@@ -1,6 +1,5 @@
-version: "3.9"
-
 services:
+  #TODO: healthcheck
   locatedb:
     image: postgres:15
     container_name: lbs_locatedb
@@ -13,6 +12,31 @@ services:
       - "55432:5432"
     volumes:
       - locatedb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d locatedb"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  externaldb:
+    image: postgres:15
+    container_name: lbs_externaldb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: externaldb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "55434:5432"
+    volumes:
+      - externaldb_data:/var/lib/postgresql/data
+      - ./external_data:/external_data
+      - ./migrations/externaldb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d externaldb"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   updatedb:
     image: postgres:15
@@ -26,6 +50,11 @@ services:
       - "55433:5432"
     volumes:
       - updatedb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d updatedb"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   server:
     build: .
@@ -36,10 +65,14 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - locatedb
-    environment:
-      DATABASE_URL: postgres://admin:admin@locatedb:5432/locatedb?sslmode=disable
+      locatedb:
+        condition: service_healthy
+      externaldb:
+        condition: service_healthy
+      updatedb:
+        condition: service_healthy
 
 volumes:
   locatedb_data:
   updatedb_data:
+  externaldb_data:

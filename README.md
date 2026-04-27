@@ -4,6 +4,23 @@
 
 Проект реализует сервер геолокации по данным сотовых сетей (GSM / WCDMA / LTE) и Wi‑Fi, IP, совместимый по входному формату с Яндекс Локатором, с использованием сторонней базы данных на этапе PoC.
 
+TODO: 
+- написать образец .env файла, инструкции к нему
+- кастомные ошибки
+- правильно добавить слои(добавить серверный)
+
+Сервер принимает от клиента данные о радиосетях, пытается определить координаты:
+
+1) Сначала — из собственной БД (LocateDB)
+
+2) Затем — из внешней БД (ExternalDB, CSV / OpenCell dump)
+
+3) При нахождении координат — сохраняет точку в БД сессии
+
+4) При отсутствии данных — возвращает ошибку
+
+Также реализована ручка /update, позволяющая обогащать базу данными, полученными от клиентов
+
 ---
 
 ## PoC
@@ -15,11 +32,7 @@ Client
   ▼
 LBS Server (Go)
   │
-  │  Convert LocateRequest → OpenCellRequest
-  ▼
-UnwiredLabs / OpenCellID API
-  │
-  │  lat / lon / accuracy
+  │  LocateDB -> ExternalDB
   ▼
 PostgreSQL
 ```
@@ -31,7 +44,6 @@ PostgreSQL
 * Go
 * PostgreSQL
 * Docker / docker-compose
-* UnwiredLabs (OpenCellID compatible API)
 
 ---
 
@@ -47,7 +59,7 @@ PostgreSQL
 │   └── db/                # DB, Logger
 ├── migrations/            # SQL миграции
 ├── docker-compose.yml
-├── .env
+├── .env.example
 └── README.md
 ```
 
@@ -105,9 +117,17 @@ docker-compose up -d
 `.env` пример:
 
 ```
-DATABASE_URL=postgres://admin:admin@localhost:5432/locatedb?sslmode=disable
-OPENCELL_URL=https://eu1.unwiredlabs.com/v2/process.php
-OPENCELL_API_KEY=your_api_key
+# LocateDB (основная БД)
+DB_DSN=postgres://admin:admin@localhost:55432/locatedb?sslmode=disable
+
+# ExternalDB (CSV / дамп OpenCell)
+EDB_DSN=postgres://admin:admin@localhost:55433/externaldb?sslmode=disable
+
+# UpdateDB
+UDB_DSN=postgres://admin:admin@localhost:55434/updatedb?sslmode=disable
+
+# Server
+HTTP_ADDR=:8080
 ```
 
 Миграции применяются самостоятельно:
@@ -166,4 +186,24 @@ curl -X POST http://localhost:8080/locate \
     "accuracy": 500
   }
 }
+```
+
+
+Для перекачки данных в externaldb используется команда
+```postgresql
+COPY cells (
+radio,
+mcc,
+mnc,
+area,
+cell,
+unit,
+strength,
+lat,
+lon
+)
+FROM '/external_data/cell.csv'
+DELIMITER ','
+CSV;
+
 ```

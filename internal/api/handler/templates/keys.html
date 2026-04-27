@@ -1,0 +1,73 @@
+{{template "layout" .}}
+{{define "content"}}
+<h1>API-ключи</h1>
+
+{{if .Flash}}
+<div class="alert alert-success">{{.Flash}}</div>
+{{end}}
+{{if .NewKey}}
+<div class="alert alert-success">
+    Новый ключ создан. Сохрани его — повторно не будет показан:<br>
+    <strong class="mono">{{.NewKey}}</strong>
+</div>
+{{end}}
+
+<div class="card">
+    <h2>Создать ключ</h2>
+    <form method="POST" action="/admin/keys">
+        <div class="form-row">
+            <label>Скоуп</label>
+            <select name="scope">
+                <option value="locate">locate</option>
+                <option value="update">update</option>
+                <option value="both">both</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Создать</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Все ключи</h2>
+    {{if .Keys}}
+    <table>
+        <thead>
+            <tr>
+                <th>Ключ</th>
+                <th>Скоуп</th>
+                <th>Статус</th>
+                <th>Создан</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {{range .Keys}}
+        <tr>
+            <td class="mono">{{.Key}}</td>
+            <td>{{.Scope}}</td>
+            <td>
+                {{if .IsActive}}
+                <span class="badge badge-active">активен</span>
+                {{else}}
+                <span class="badge badge-revoked">отозван</span>
+                {{end}}
+            </td>
+            <td>{{.CreatedAt.Format "02.01.2006 15:04"}}</td>
+            <td>
+                {{if .IsActive}}
+                <form method="POST" action="/admin/keys/revoke" style="display:inline">
+                    <input type="hidden" name="key" value="{{.Key}}">
+                    <button type="submit" class="btn btn-danger btn-sm"
+                        onclick="return confirm('Отозвать ключ?')">Отозвать</button>
+                </form>
+                {{end}}
+            </td>
+        </tr>
+        {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p style="color:#999;font-size:14px;">Ключей пока нет.</p>
+    {{end}}
+</div>
+{{end}}

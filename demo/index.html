@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>LBS Demo — трек</title>
+
+    <!-- Leaflet.js: бесплатная карта, без API-ключа -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body { margin: 0; font-family: sans-serif; }
+        #map { height: 100vh; width: 100%; }
+
+        /* Панель управления поверх карты */
+        #panel {
+            position: absolute; top: 10px; right: 10px; z-index: 1000;
+            background: white; padding: 16px; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3); width: 260px;
+        }
+        #panel h3 { margin: 0 0 12px; font-size: 14px; color: #333; }
+        #panel label { font-size: 12px; color: #666; display: block; margin-top: 8px; }
+        #panel input, #panel textarea {
+            width: 100%; box-sizing: border-box;
+            padding: 6px; border: 1px solid #ddd; border-radius: 4px;
+            font-size: 12px; margin-top: 2px;
+        }
+        #panel textarea { height: 80px; resize: vertical; }
+        button {
+            margin-top: 10px; width: 100%; padding: 8px;
+            border: none; border-radius: 4px; cursor: pointer; font-size: 13px;
+        }
+        #btnStart { background: #4CAF50; color: white; }
+        #btnStop  { background: #f44336; color: white; display: none; }
+        #btnClear { background: #9E9E9E; color: white; margin-top: 4px; }
+
+        #status {
+            margin-top: 10px; padding: 8px; background: #f5f5f5;
+            border-radius: 4px; font-size: 11px; color: #555;
+        }
+        #coords {
+            margin-top: 6px; font-size: 12px; font-weight: bold; color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="panel">
+    <h3> LBS Server Demo</h3>
+
+    <label>URL сервера</label>
+    <input id="serverUrl" type="text" value="http://localhost:8080"/>
+
+    <label>Интервал запросов (мс)</label>
+    <input id="interval" type="number" value="3000" min="500"/>
+
+    <button id="btnStart" onclick="startTracking()">▶ Старт</button>
+    <button id="btnStop"  onclick="stopTracking()">⏹ Стоп</button>
+    <button id="btnClear" onclick="clearTrack()">🗑 Очистить трек</button>
+
+    <div id="status">Ожидание старта...</div>
+    <div id="coords">—</div>
+</div>
+
+<script>
+    // --- Инициализация карты (центр — Москва, можно поменять) ---
+    const map = L.map('map').setView([55.7558, 37.6173], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // --- Состояние трека ---
+    let trackPoints  = [];   // [{lat, lon, accuracy, time}]
+    let polyline     = L.polyline([], {color: '#2196F3', weight: 3}).addTo(map);
+    let markers      = [];
+    let intervalId   = null;
+    let requestCount = 0;
+    let demoCells    = [];   // список тел запросов от /demo/cells
+    let cellIndex    = 0;
+
+    // --- Маркер текущей позиции ---
+    const currentIcon = L.divIcon({
+        html: '<div style="width:14px;height:14px;background:#2196F3;border:3px solid white;border-radius:50%;box-shadow:0 0 4px rgba(0,0,0,0.4)"></div>',
+        iconSize: [14, 14], iconAnchor: [7, 7]
+    });
+
+    async function sendLocateRequest() {
+        const base = document.getElementById('serverUrl').value.trim();
+
+        if (demoCells.length === 0) {
+            setStatus('⚠️ Данные вышек не загружены');
+            return;
+        }
+
+        const cellBody = demoCells[cellIndex % demoCells.length];
+        cellIndex++;
+
+        setStatus('⏳ Отправка запроса...');
+
+        try {
+            const response = await fetch(base + '/locate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cellBody)
+            });
+
+            if (!response.ok) {
+                setStatus(`❌ HTTP ${response.status}: ${response.statusText}`);
+                return;
+            }
+
+            const data = await response.json();
+
+            // Формат ответа сервера: { sessionUUID, location: { lat, lon, accuracy } }
+            const lat      = data.location?.lat;
+            const lon      = data.location?.lon;
+            const accuracy = data.location?.accuracy ?? 0;
+            const uuid     = data.sessionUUID ?? '—';
+
+            if (lat == null || lon == null) {
+                setStatus('⚠️ Сервер не вернул координаты');
+                return;
+            }
+
+            // Добавляем точку в трек
+            addPoint(lat, lon, accuracy, uuid);
+            requestCount++;
+
+            setStatus(`✅ Запрос #${requestCount} | UUID: ${uuid.substring(0,8)}...`);
+            document.getElementById('coords').textContent =
+                `lat: ${lat.toFixed(6)}  lon: ${lon.toFixed(6)}  acc: ±${accuracy}м`;
+
+        } catch (err) {
+            setStatus(`❌ Ошибка: ${err.message}`);
+        }
+    }
+
+    function addPoint(lat, lon, accuracy, uuid) {
+        const latlng = [lat, lon];
+        trackPoints.push({ lat, lon, accuracy, time: new Date() });
+
+        // Обновляем линию трека
+        polyline.addLatLng(latlng);
+
+        // Рисуем маркер с попапом
+        const marker = L.marker(latlng, { icon: currentIcon })
+            .bindPopup(`
+        <b>Точка #${trackPoints.length}</b><br>
+        lat: ${lat.toFixed(6)}<br>
+        lon: ${lon.toFixed(6)}<br>
+        accuracy: ±${accuracy}м<br>
+        uuid: ${uuid}<br>
+        время: ${new Date().toLocaleTimeString()}
+      `)
+            .addTo(map);
+        markers.push(marker);
+
+        // Круг точности вокруг точки
+        L.circle(latlng, {
+            radius: accuracy, color: '#2196F3',
+            fillColor: '#2196F3', fillOpacity: 0.1, weight: 1
+        }).addTo(map);
+
+        // Центрируем карту на последней точке
+        map.panTo(latlng);
+    }
+
+    async function startTracking() {
+        const base = document.getElementById('serverUrl').value.trim();
+
+        setStatus('⏳ Загрузка данных вышек...');
+        try {
+            const r = await fetch(base + '/demo/cells');
+            demoCells = await r.json();
+            cellIndex = 0;
+            setStatus(`✅ Загружено ${demoCells.length} вышек`);
+        } catch (e) {
+            setStatus(`❌ Не удалось загрузить вышки: ${e.message}`);
+            return;
+        }
+
+        const ms = parseInt(document.getElementById('interval').value) || 3000;
+        sendLocateRequest(); // первый запрос сразу
+        intervalId = setInterval(sendLocateRequest, ms);
+
+        document.getElementById('btnStart').style.display = 'none';
+        document.getElementById('btnStop').style.display  = 'block';
+        setStatus('🟢 Трекинг запущен');
+    }
+
+    function stopTracking() {
+        clearInterval(intervalId);
+        intervalId = null;
+        document.getElementById('btnStart').style.display = 'block';
+        document.getElementById('btnStop').style.display  = 'none';
+        setStatus(`⏹ Остановлено. Записано точек: ${trackPoints.length}`);
+    }
+
+    function clearTrack() {
+        stopTracking();
+        trackPoints = [];
+        polyline.setLatLngs([]);
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        requestCount = 0;
+        cellIndex = 0;
+        document.getElementById('coords').textContent = '—';
+        setStatus('🗑 Трек очищен');
+    }
+
+    function setStatus(msg) {
+        document.getElementById('status').textContent = msg;
+    }
+</script>
+</body>
+</html>
