@@ -18,9 +18,13 @@ type session struct {
 
 // Settings — динамические настройки сервера, изменяемые через UI.
 type Settings struct {
-	RequireKeyLocate bool
-	RequireKeyUpdate bool
-	RefreshPeriodMs  int
+	RequireKeyLocate    bool
+	RequireKeyUpdate    bool
+	RefreshPeriodMs     int
+	LocateMinPeriodKey  int
+	LocateMinPeriodAnon int
+	UpdateMinPeriodKey  int
+	UpdateMinPeriodAnon int
 }
 
 // AdminService управляет сессиями админа и динамическими настройками.

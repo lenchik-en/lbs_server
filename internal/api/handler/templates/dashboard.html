@@ -6,9 +6,9 @@
 <div class="alert alert-success">{{.Flash}}</div>
 {{end}}
 
-<div class="card">
-    <h2>API-ключи</h2>
-    <form method="POST" action="/admin/settings">
+<form method="POST" action="/admin/settings">
+    <div class="card">
+        <h2>API-ключи</h2>
         <div class="form-row">
             <label>Требовать ключ для /locate</label>
             <input type="checkbox" name="require_key_locate" {{if .Settings.RequireKeyLocate}}checked{{end}}>
@@ -17,31 +17,64 @@
             <label>Требовать ключ для /update</label>
             <input type="checkbox" name="require_key_update" {{if .Settings.RequireKeyUpdate}}checked{{end}}>
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top:8px;">Сохранить</button>
-    </form>
-</div>
+    </div>
 
-<div class="card">
-    <h2>Refresh</h2>
-    <form method="POST" action="/admin/settings" style="display:inline">
-        <input type="hidden" name="require_key_locate" value="{{if .Settings.RequireKeyLocate}}on{{end}}">
-        <input type="hidden" name="require_key_update" value="{{if .Settings.RequireKeyUpdate}}on{{end}}">
+    <div class="card">
+        <h2>Rate Limiting</h2>
+        <p style="font-size:13px;color:#666;margin-bottom:12px;">
+            Минимальный период между запросами (мс). 0 = выключено.<br>
+            <b>С ключом</b> — ограничение по X-Api-Key. <b>Без ключа</b> — по sessionUUID.
+        </p>
+        <table style="border-collapse:collapse;width:100%">
+            <thead>
+                <tr>
+                    <th style="text-align:left;padding:6px 12px;border-bottom:1px solid #eee"></th>
+                    <th style="text-align:center;padding:6px 12px;border-bottom:1px solid #eee">С ключом (мс)</th>
+                    <th style="text-align:center;padding:6px 12px;border-bottom:1px solid #eee">Без ключа (мс)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding:8px 12px">/locate</td>
+                    <td style="padding:8px 12px;text-align:center">
+                        <input type="number" name="locate_min_period_key" value="{{.Settings.LocateMinPeriodKey}}" min="0" style="width:100px;text-align:center">
+                    </td>
+                    <td style="padding:8px 12px;text-align:center">
+                        <input type="number" name="locate_min_period_anon" value="{{.Settings.LocateMinPeriodAnon}}" min="0" style="width:100px;text-align:center">
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:8px 12px">/update</td>
+                    <td style="padding:8px 12px;text-align:center">
+                        <input type="number" name="update_min_period_key" value="{{.Settings.UpdateMinPeriodKey}}" min="0" style="width:100px;text-align:center">
+                    </td>
+                    <td style="padding:8px 12px;text-align:center">
+                        <input type="number" name="update_min_period_anon" value="{{.Settings.UpdateMinPeriodAnon}}" min="0" style="width:100px;text-align:center">
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Refresh</h2>
         <div class="form-row">
             <label>Период авто-refresh (мс, 0 = выключен)</label>
             <input type="number" name="refresh_period_ms" value="{{.Settings.RefreshPeriodMs}}" min="0" style="width:120px">
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top:8px;">Сохранить</button>
-    </form>
-
-    <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;">
-        <form method="POST" action="/admin/refresh" style="display:inline">
-            <button type="submit" class="btn btn-success">▶ Запустить refresh вручную</button>
-        </form>
-        {{if .RefreshResult}}
-        <span style="margin-left:16px;font-size:14px;color:#555;">
-            Ячеек: {{.RefreshResult.CellsUpserted}} / WiFi: {{.RefreshResult.WifisUpserted}} / IP: {{.RefreshResult.IPsUpserted}}
-        </span>
-        {{end}}
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid #eee;display:flex;align-items:center;gap:16px;">
+            <button type="submit" form="refresh-form" class="btn btn-success">▶ Запустить refresh вручную</button>
+            {{if .RefreshResult}}
+            <span style="font-size:14px;color:#555;">
+                Ячеек: {{.RefreshResult.CellsUpserted}} / WiFi: {{.RefreshResult.WifisUpserted}} / IP: {{.RefreshResult.IPsUpserted}}
+            </span>
+            {{end}}
+        </div>
     </div>
-</div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+        <button type="submit" class="btn btn-primary">Сохранить все настройки</button>
+    </div>
+</form>
+<form id="refresh-form" method="POST" action="/admin/refresh"></form>
 {{end}}

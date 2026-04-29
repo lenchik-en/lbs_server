@@ -50,9 +50,13 @@ func main() {
 	refreshSvc := service.NewRefreshService(updateRepo, locateRepo)
 	apiKeySvc := service.NewAPIKeyService(apiKeyRepo)
 	adminSvc := service.NewAdminService(cfg.AdminLogin, cfg.AdminPasswordHash, service.Settings{
-		RequireKeyLocate: cfg.RequireKeyLocate,
-		RequireKeyUpdate: cfg.RequireKeyUpdate,
-		RefreshPeriodMs:  cfg.RefreshPeriodMs,
+		RequireKeyLocate:    cfg.RequireKeyLocate,
+		RequireKeyUpdate:    cfg.RequireKeyUpdate,
+		RefreshPeriodMs:     cfg.RefreshPeriodMs,
+		LocateMinPeriodKey:  cfg.LocateMinPeriodKey,
+		LocateMinPeriodAnon: cfg.LocateMinPeriodAnon,
+		UpdateMinPeriodKey:  cfg.UpdateMinPeriodKey,
+		UpdateMinPeriodAnon: cfg.UpdateMinPeriodAnon,
 	})
 
 	// --- авто-refresh (период берём из AdminService — он может меняться через UI) ---

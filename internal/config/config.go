@@ -12,15 +12,14 @@ type Config struct {
 	EDBDSN   string
 	UDBDSN   string
 
-	// Rate limiting: minimum period in milliseconds between requests per identifier.
-	// 0 = disabled. Configured independently for /locate and /update,
-	// and for three identifier scopes: API key, session UUID, and (key, UUID) pair.
-	LocateMinPeriodKey     int
-	LocateMinPeriodUUID    int
-	LocateMinPeriodKeyUUID int
-	UpdateMinPeriodKey     int
-	UpdateMinPeriodUUID    int
-	UpdateMinPeriodKeyUUID int
+	// Rate limiting: minimum period in milliseconds between requests.
+	// 0 = disabled. Configured independently for /locate and /update.
+	// Key  — applies to clients that send X-Api-Key header (limited by key value).
+	// Anon — applies to clients without a key (limited by sessionUUID from body).
+	LocateMinPeriodKey  int
+	LocateMinPeriodAnon int
+	UpdateMinPeriodKey  int
+	UpdateMinPeriodAnon int
 
 	// Refresh: период автоматической перекачки UpdateDB → LocateDB, мс.
 	// 0 = авто-refresh отключён, только ручной через POST /refresh.
@@ -38,21 +37,19 @@ type Config struct {
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		HTTPAddr:               os.Getenv("HTTP_ADDR"),
-		DBDSN:                  os.Getenv("DB_DSN"),
-		EDBDSN:                 os.Getenv("EDB_DSN"),
-		UDBDSN:                 os.Getenv("UDB_DSN"),
-		LocateMinPeriodKey:     envInt("LOCATE_MIN_PERIOD_KEY"),
-		LocateMinPeriodUUID:    envInt("LOCATE_MIN_PERIOD_UUID"),
-		LocateMinPeriodKeyUUID: envInt("LOCATE_MIN_PERIOD_KEY_UUID"),
-		UpdateMinPeriodKey:     envInt("UPDATE_MIN_PERIOD_KEY"),
-		UpdateMinPeriodUUID:    envInt("UPDATE_MIN_PERIOD_UUID"),
-		UpdateMinPeriodKeyUUID: envInt("UPDATE_MIN_PERIOD_KEY_UUID"),
-		RefreshPeriodMs:        envInt("REFRESH_PERIOD_MS"),
-		RequireKeyLocate:       os.Getenv("REQUIRE_KEY_LOCATE") == "true",
-		RequireKeyUpdate:       os.Getenv("REQUIRE_KEY_UPDATE") == "true",
-		AdminLogin:             os.Getenv("ADMIN_LOGIN"),
-		AdminPasswordHash:      os.Getenv("ADMIN_PASSWORD_HASH"),
+		HTTPAddr:            os.Getenv("HTTP_ADDR"),
+		DBDSN:               os.Getenv("DB_DSN"),
+		EDBDSN:              os.Getenv("EDB_DSN"),
+		UDBDSN:              os.Getenv("UDB_DSN"),
+		LocateMinPeriodKey:  envInt("LOCATE_MIN_PERIOD_KEY"),
+		LocateMinPeriodAnon: envInt("LOCATE_MIN_PERIOD_ANON"),
+		UpdateMinPeriodKey:  envInt("UPDATE_MIN_PERIOD_KEY"),
+		UpdateMinPeriodAnon: envInt("UPDATE_MIN_PERIOD_ANON"),
+		RefreshPeriodMs:     envInt("REFRESH_PERIOD_MS"),
+		RequireKeyLocate:    os.Getenv("REQUIRE_KEY_LOCATE") == "true",
+		RequireKeyUpdate:    os.Getenv("REQUIRE_KEY_UPDATE") == "true",
+		AdminLogin:          os.Getenv("ADMIN_LOGIN"),
+		AdminPasswordHash:   os.Getenv("ADMIN_PASSWORD_HASH"),
 	}
 
 	if cfg.AdminLogin == "" || cfg.AdminPasswordHash == "" {
