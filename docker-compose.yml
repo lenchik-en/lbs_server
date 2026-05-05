@@ -1,5 +1,4 @@
 services:
-  #TODO: healthcheck
   locatedb:
     image: postgres:15
     container_name: lbs_locatedb

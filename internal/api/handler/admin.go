@@ -27,9 +27,18 @@ func NewAdminHandler(adminSvc *service.AdminService, apiKeySvc *service.APIKeySe
 	return &AdminHandler{adminSvc: adminSvc, apiKeySvc: apiKeySvc, refreshSvc: refreshSvc}
 }
 
+var templateFuncs = template.FuncMap{
+	"add": func(a, b int) int { return a + b },
+	"sub": func(a, b int) int { return a - b },
+}
+
+func parseAdminTemplates(name string) (*template.Template, error) {
+	return template.New("").Funcs(templateFuncs).ParseFS(adminTemplates, "templates/layout.html", "templates/"+name)
+}
+
 func (h *AdminHandler) render(w http.ResponseWriter, name string, data map[string]any) {
 	data["LoggedIn"] = true
-	t, err := template.New("").ParseFS(adminTemplates, "templates/layout.html", "templates/"+name)
+	t, err := parseAdminTemplates(name)
 	if err != nil {
 		log.Printf("[WARN] parse %s: %v", name, err)
 		http.Error(w, "template error", http.StatusInternalServerError)
@@ -106,7 +115,7 @@ func (h *AdminHandler) SaveSettings(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	parseInt := func(key string) int { v, _ := strconv.Atoi(r.FormValue(key)); return v }
 
-	h.adminSvc.UpdateSettings(service.Settings{
+	h.adminSvc.UpdateSettings(model.Settings{
 		RequireKeyLocate:    r.FormValue("require_key_locate") == "on",
 		RequireKeyUpdate:    r.FormValue("require_key_update") == "on",
 		RefreshPeriodMs:     parseInt("refresh_period_ms"),

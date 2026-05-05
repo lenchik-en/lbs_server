@@ -33,6 +33,9 @@ type UpdateRepository interface {
 type SessionRepository interface {
 	CreateIfNotExists(ctx context.Context, sessionUUID string) error
 	SavePoint(ctx context.Context, sessionUUID string, lat, lon float64, accuracy int, source string, rawReq, rawResp any) error
+	ListSessions(ctx context.Context, limit, offset int) ([]model.SessionListRow, int64, error)
+	GetSessionPoints(ctx context.Context, sessionUUID string) ([]model.SessionPoint, error)
+	UpdatePoint(ctx context.Context, id int64, lat, lon float64, accuracy int) error
 }
 
 // RefreshSource — постраничное чтение из UpdateDB для refresh.
@@ -55,4 +58,10 @@ type APIKeyRepository interface {
 	Create(ctx context.Context, scope model.KeyScope) (*model.APIKey, error)
 	Deactivate(ctx context.Context, key string) error
 	ListAll(ctx context.Context) ([]*model.APIKey, error)
+}
+
+// SettingsRepository — персистентное хранилище настроек сервера.
+type SettingsRepository interface {
+	Load(ctx context.Context) (*model.Settings, error)
+	Save(ctx context.Context, s model.Settings) error
 }

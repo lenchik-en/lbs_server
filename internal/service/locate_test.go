@@ -99,6 +99,15 @@ func (m *mockSessionRepo) CreateIfNotExists(_ context.Context, _ string) error {
 func (m *mockSessionRepo) SavePoint(_ context.Context, _ string, _, _ float64, _ int, _ string, _, _ any) error {
 	return nil
 }
+func (m *mockSessionRepo) ListSessions(_ context.Context, _, _ int) ([]model.SessionListRow, int64, error) {
+	return nil, 0, nil
+}
+func (m *mockSessionRepo) GetSessionPoints(_ context.Context, _ string) ([]model.SessionPoint, error) {
+	return nil, nil
+}
+func (m *mockSessionRepo) UpdatePoint(_ context.Context, _ int64, _, _ float64, _ int) error {
+	return nil
+}
 
 // syncGroup выполняет Go() синхронно — для тестов.
 type syncGroup struct{}

@@ -43,27 +43,60 @@ func (s *RefreshService) Refresh(_ context.Context) (model.RefreshStats, error) 
 	return stats, nil
 }
 
-func (s *RefreshService) StartAutoRefresh(ctx context.Context, periodMs int) {
-	if periodMs == 0 {
-		log.Println("[INFO] auto-refresh disabled")
-		return
-	}
-	period := time.Duration(periodMs) * time.Millisecond
+// StartAutoRefresh запускает фоновую горутину, которая вызывает Refresh с периодом,
+// возвращаемым getPeriod(). Каждые 5 секунд проверяет, изменился ли период,
+// и пересоздаёт тикер — это позволяет менять период через admin UI без перезапуска.
+// period=0 означает "выключено"; горутина продолжает работать и включится при смене на >0.
+func (s *RefreshService) StartAutoRefresh(ctx context.Context, getPeriod func() int) {
 	go func() {
-		ticker := time.NewTicker(period)
-		defer ticker.Stop()
+		var (
+			ticker     *time.Ticker
+			tickC      <-chan time.Time
+			lastPeriod = -1
+		)
+		poll := time.NewTicker(5 * time.Second)
+		defer func() {
+			poll.Stop()
+			if ticker != nil {
+				ticker.Stop()
+			}
+		}()
+
+		checkPeriod := func() {
+			p := getPeriod()
+			if p == lastPeriod {
+				return
+			}
+			if ticker != nil {
+				ticker.Stop()
+				ticker = nil
+				tickC = nil
+			}
+			lastPeriod = p
+			if p > 0 {
+				ticker = time.NewTicker(time.Duration(p) * time.Millisecond)
+				tickC = ticker.C
+				log.Printf("[INFO] auto-refresh period set to %dms", p)
+			} else {
+				log.Println("[INFO] auto-refresh disabled")
+			}
+		}
+
+		checkPeriod()
+
 		for {
 			select {
-			case <-ticker.C:
-				if _, err := s.Refresh(context.Background()); err != nil {
+			case <-tickC:
+				if _, err := s.Refresh(ctx); err != nil {
 					log.Printf("[WARN] auto-refresh failed: %v", err)
 				}
+			case <-poll.C:
+				checkPeriod()
 			case <-ctx.Done():
 				return
 			}
 		}
 	}()
-	log.Printf("[INFO] auto-refresh started (period=%v)", period)
 }
 
 func (s *RefreshService) refreshCells() (int, error) {
