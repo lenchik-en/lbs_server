@@ -1,0 +1,140 @@
+{{template "layout" .}}
+{{define "content"}}
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap">
+    <a href="/admin/sessions" style="color:#4f6ef7;font-size:14px">&larr; К списку</a>
+    <h1 style="margin:0">Маршрут</h1>
+    <span class="mono" style="font-size:14px;color:#888">{{.SessionUUID}}</span>
+    <div style="margin-left:auto">
+        <form method="POST" action="/admin/sessions/{{.SessionUUID}}/refresh" style="display:inline"
+              onsubmit="return confirm('Отправить скорректированные точки в LocateDB?')">
+            <button type="submit" class="btn btn-success btn-sm">Отправить в refresh</button>
+        </form>
+    </div>
+</div>
+
+{{if .Flash}}
+<div class="alert alert-success">{{.Flash}}</div>
+{{end}}
+
+{{if not .Points}}
+<div class="card" style="color:#888;text-align:center;padding:40px">Точек нет</div>
+{{else}}
+<div class="card" style="padding:0">
+    <table id="points-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Время</th>
+                <th>Широта</th>
+                <th>Долгота</th>
+                <th style="text-align:center">Точность (м)</th>
+                <th>Источник</th>
+                <th style="width:80px"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {{range $i, $p := .Points}}
+            <tr id="row-{{$p.ID}}" data-id="{{$p.ID}}">
+                <td style="color:#aaa">{{add $i 1}}</td>
+                <td>{{$p.Timestamp.Format "02.01.2006 15:04:05"}}</td>
+                <td class="lat-cell mono">{{printf "%.6f" $p.Lat}}</td>
+                <td class="lon-cell mono">{{printf "%.6f" $p.Lon}}</td>
+                <td class="acc-cell" style="text-align:center">{{$p.Accuracy}}</td>
+                <td><span class="badge badge-active">{{$p.Source}}</span></td>
+                <td>
+                    <button class="btn btn-sm" style="background:#f0f0f0;color:#333"
+                            onclick="startEdit({{$p.ID}}, {{printf `%.6f` $p.Lat}}, {{printf `%.6f` $p.Lon}}, {{$p.Accuracy}})">
+                        ✏
+                    </button>
+                </td>
+            </tr>
+        {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}
+
+<!-- Модальное окно редактирования -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center">
+    <div class="card" style="width:340px;margin:0">
+        <h2 style="margin-bottom:20px">Редактировать точку</h2>
+        <input type="hidden" id="edit-id">
+        <div style="margin-bottom:12px">
+            <label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Широта</label>
+            <input type="number" id="edit-lat" step="0.000001" min="-90" max="90"
+                   style="width:100%;border:1px solid #ddd;border-radius:6px;padding:8px 12px;font-size:14px;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:12px">
+            <label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Долгота</label>
+            <input type="number" id="edit-lon" step="0.000001" min="-180" max="180"
+                   style="width:100%;border:1px solid #ddd;border-radius:6px;padding:8px 12px;font-size:14px;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:16px">
+            <label style="display:block;font-size:13px;color:#666;margin-bottom:4px">Точность (м)</label>
+            <input type="number" id="edit-acc" min="0"
+                   style="width:100%;border:1px solid #ddd;border-radius:6px;padding:8px 12px;font-size:14px;box-sizing:border-box">
+        </div>
+        <div id="edit-error" style="color:#c0392b;font-size:13px;margin-bottom:12px;display:none"></div>
+        <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="saveEdit()">Сохранить</button>
+            <button class="btn" style="background:#f0f0f0;color:#333" onclick="closeModal()">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const sessionUUID = "{{.SessionUUID}}";
+
+function startEdit(id, lat, lon, acc) {
+    document.getElementById("edit-id").value = id;
+    document.getElementById("edit-lat").value = lat;
+    document.getElementById("edit-lon").value = lon;
+    document.getElementById("edit-acc").value = acc;
+    document.getElementById("edit-error").style.display = "none";
+    const modal = document.getElementById("edit-modal");
+    modal.style.display = "flex";
+}
+
+function closeModal() {
+    document.getElementById("edit-modal").style.display = "none";
+}
+
+async function saveEdit() {
+    const id  = document.getElementById("edit-id").value;
+    const lat = parseFloat(document.getElementById("edit-lat").value);
+    const lon = parseFloat(document.getElementById("edit-lon").value);
+    const acc = parseInt(document.getElementById("edit-acc").value, 10);
+
+    const errEl = document.getElementById("edit-error");
+    errEl.style.display = "none";
+
+    try {
+        const resp = await fetch(`/admin/sessions/${sessionUUID}/points/${id}`, {
+            method: "PATCH",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({lat, lon, accuracy: acc}),
+        });
+        if (!resp.ok) {
+            const text = await resp.text();
+            errEl.textContent = text || "Ошибка сохранения";
+            errEl.style.display = "block";
+            return;
+        }
+        // Обновляем строку в таблице без перезагрузки
+        const row = document.getElementById(`row-${id}`);
+        row.querySelector(".lat-cell").textContent = lat.toFixed(6);
+        row.querySelector(".lon-cell").textContent = lon.toFixed(6);
+        row.querySelector(".acc-cell").textContent = acc;
+        closeModal();
+    } catch(e) {
+        errEl.textContent = "Сетевая ошибка";
+        errEl.style.display = "block";
+    }
+}
+
+// Закрытие модала по клику на фон
+document.getElementById("edit-modal").addEventListener("click", function(e) {
+    if (e.target === this) closeModal();
+});
+</script>
+{{end}}
