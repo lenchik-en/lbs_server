@@ -23,6 +23,7 @@ type CellRefreshRow struct {
 	LTEAge           sql.NullInt32
 	Lat, Lon         float64
 	ObjectType       sql.NullString
+	Source           sql.NullString
 }
 
 type WifiRefreshRow struct {

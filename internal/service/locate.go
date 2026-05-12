@@ -177,6 +177,7 @@ func (s *LocateService) findCellLocation(ctx context.Context, cell model.Cell) (
 	}
 	if loc != nil {
 		log.Println("[INFO] location found in ExternalDB")
+		loc.Source = model.SourceExternal
 		cellCopy := cell
 		locCopy := loc
 		s.wg.Go(func() {

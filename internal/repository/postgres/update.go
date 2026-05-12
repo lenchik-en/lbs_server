@@ -102,7 +102,7 @@ func (r *UpdateRepo) FetchCellsForRefresh(offset, limit int) ([]model.CellRefres
 		SELECT id, tech, mcc, mnc,
 		       lac, tac, cid, ci, psc, pci, arfcn, earfcn, uarfcn, bsic,
 		       gsm_timing_advance, lte_timing_advance, gsm_age, wcdma_age, lte_age,
-		       lat, lon, type
+		       lat, lon, type, source
 		FROM cells
 		WHERE lat IS NOT NULL AND lon IS NOT NULL
 		ORDER BY id LIMIT $1 OFFSET $2
@@ -122,7 +122,7 @@ func (r *UpdateRepo) FetchCellsForRefresh(offset, limit int) ([]model.CellRefres
 			&row.ARFCN, &row.EARFCN, &row.UARFCN, &row.BSIC,
 			&row.GSMTimingAdvance, &row.LTETimingAdvance,
 			&row.GSMAge, &row.WCDMAAge, &row.LTEAge,
-			&row.Lat, &row.Lon, &row.ObjectType,
+			&row.Lat, &row.Lon, &row.ObjectType, &row.Source,
 		); err != nil {
 			return nil, err
 		}
