@@ -10,6 +10,7 @@ import (
 
 	"github.com/lenchik-en/lbs_server/internal/api"
 	"github.com/lenchik-en/lbs_server/internal/config"
+	"github.com/lenchik-en/lbs_server/internal/domain/model"
 	"github.com/lenchik-en/lbs_server/internal/ratelimit"
 	"github.com/lenchik-en/lbs_server/internal/repository/postgres"
 	"github.com/lenchik-en/lbs_server/internal/service"
@@ -38,9 +39,10 @@ func main() {
 		log.Fatalf("updateRepo: %v", err)
 	}
 
-	// SessionRepo живёт в LocateDB (там же sessions/session_points)
+	// SessionRepo и SettingsRepo живут в LocateDB
 	sessionRepo := postgres.NewSessionRepo(locateRepo.DB())
 	apiKeyRepo := postgres.NewAPIKeyRepo(locateRepo.DB())
+	settingsRepo := postgres.NewSettingsRepo(locateRepo.DB())
 
 	// --- сервисы ---
 	wg := &service.WaitGroupAdapter{}
@@ -49,18 +51,23 @@ func main() {
 	updateSvc := service.NewUpdateService(updateRepo, sessionRepo)
 	refreshSvc := service.NewRefreshService(updateRepo, locateRepo)
 	apiKeySvc := service.NewAPIKeyService(apiKeyRepo)
-	adminSvc := service.NewAdminService(cfg.AdminLogin, cfg.AdminPasswordHash, service.Settings{
-		RequireKeyLocate: cfg.RequireKeyLocate,
-		RequireKeyUpdate: cfg.RequireKeyUpdate,
-		RefreshPeriodMs:  cfg.RefreshPeriodMs,
-	})
+	sessionAdminSvc := service.NewSessionAdminService(sessionRepo, locateRepo)
+	adminSvc := service.NewAdminService(cfg.AdminLogin, cfg.AdminPasswordHash, model.Settings{
+		RequireKeyLocate:    cfg.RequireKeyLocate,
+		RequireKeyUpdate:    cfg.RequireKeyUpdate,
+		RefreshPeriodMs:     cfg.RefreshPeriodMs,
+		LocateMinPeriodKey:  cfg.LocateMinPeriodKey,
+		LocateMinPeriodAnon: cfg.LocateMinPeriodAnon,
+		UpdateMinPeriodKey:  cfg.UpdateMinPeriodKey,
+		UpdateMinPeriodAnon: cfg.UpdateMinPeriodAnon,
+	}, settingsRepo)
 
 	// --- авто-refresh (период берём из AdminService — он может меняться через UI) ---
-	refreshSvc.StartAutoRefresh(ctx, cfg.RefreshPeriodMs)
+	refreshSvc.StartAutoRefresh(ctx, func() int { return adminSvc.GetSettings().RefreshPeriodMs })
 
 	// --- HTTP ---
 	limiter := ratelimit.New()
-	mux := api.NewMux(adminSvc, limiter, locateSvc, updateSvc, refreshSvc, apiKeySvc)
+	mux := api.NewMux(adminSvc, limiter, locateSvc, updateSvc, refreshSvc, apiKeySvc, sessionAdminSvc)
 
 	server := &http.Server{
 		Addr:         cfg.HTTPAddr,

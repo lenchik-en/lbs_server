@@ -18,6 +18,7 @@ func NewMux(
 	updateSvc *service.UpdateService,
 	refreshSvc *service.RefreshService,
 	apiKeySvc *service.APIKeyService,
+	sessionAdminSvc *service.SessionAdminService,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -26,30 +27,35 @@ func NewMux(
 
 	// /locate — requireFn читает актуальные настройки из AdminService
 	locateRL := middleware.RateLimit(limiter,
-		middleware.RateLimitConfig{KeyPeriodMs: 0, UUIDPeriodMs: 0, KeyUUIDPeriodMs: 0},
+		func() middleware.RateLimitConfig {
+			s := adminSvc.GetSettings()
+			return middleware.RateLimitConfig{KeyPeriodMs: s.LocateMinPeriodKey, AnonPeriodMs: s.LocateMinPeriodAnon}
+		},
 		"locate",
-		func(r *http.Request) string { return r.Header.Get("X-Api-Key") },
-		func(r *http.Request) string { return "" },
 	)
 	locateAuth := middleware.RequireAPIKey(apiKeySvc, model.ScopeLocate,
 		func() bool { return adminSvc.GetSettings().RequireKeyLocate },
 	)
-	mux.Handle("/locate", locateAuth(locateRL(handler.NewLocateHandler(locateSvc))))
+	// ParseBodyUUID → RateLimit → Auth → Handler
+	mux.Handle("/locate", middleware.ParseBodyUUID(locateRL(locateAuth(handler.NewLocateHandler(locateSvc)))))
 
 	// /update
 	updateRL := middleware.RateLimit(limiter,
-		middleware.RateLimitConfig{KeyPeriodMs: 0, UUIDPeriodMs: 0, KeyUUIDPeriodMs: 0},
+		func() middleware.RateLimitConfig {
+			s := adminSvc.GetSettings()
+			return middleware.RateLimitConfig{KeyPeriodMs: s.UpdateMinPeriodKey, AnonPeriodMs: s.UpdateMinPeriodAnon}
+		},
 		"update",
-		func(r *http.Request) string { return r.Header.Get("X-Api-Key") },
-		func(r *http.Request) string { return "" },
 	)
 	updateAuth := middleware.RequireAPIKey(apiKeySvc, model.ScopeUpdate,
 		func() bool { return adminSvc.GetSettings().RequireKeyUpdate },
 	)
-	mux.Handle("/update", updateAuth(updateRL(handler.NewUpdateHandler(updateSvc))))
+	// ParseBodyUUID → RateLimit → Auth → Handler
+	mux.Handle("/update", middleware.ParseBodyUUID(updateRL(updateAuth(handler.NewUpdateHandler(updateSvc)))))
 
-	// /refresh (публичный — только для внутреннего использования)
-	mux.Handle("/refresh", handler.NewRefreshHandler(refreshSvc))
+	// /refresh — только для авторизованных (admin session cookie)
+	refreshAPIAuth := middleware.AdminAPIAuth(adminSvc)
+	mux.Handle("/refresh", refreshAPIAuth(handler.NewRefreshHandler(refreshSvc)))
 
 	// --- Админ-панель ---
 	adminH := handler.NewAdminHandler(adminSvc, apiKeySvc, refreshSvc)
@@ -68,6 +74,8 @@ func NewMux(
 	mux.HandleFunc("/admin/logout", adminH.Logout)
 
 	// Все остальные /admin/* — под сессионной проверкой
+	sessionsH := handler.NewSessionsHandler(sessionAdminSvc)
+
 	adminMux := http.NewServeMux()
 	adminMux.HandleFunc("/admin/", adminH.Dashboard)
 	adminMux.HandleFunc("/admin/settings", adminH.SaveSettings)
@@ -83,6 +91,8 @@ func NewMux(
 		}
 	})
 	adminMux.HandleFunc("/admin/keys/revoke", adminH.RevokeKey)
+	adminMux.HandleFunc("/admin/sessions", sessionsH.ListPage)
+	adminMux.HandleFunc("/admin/sessions/", sessionsH.Route)
 
 	mux.Handle("/admin/", adminAuth(adminMux))
 

@@ -1,0 +1,45 @@
+{{template "layout" .}}
+{{define "content"}}
+<h1>Маршруты <span style="font-size:14px;font-weight:400;color:#888">({{.Total}})</span></h1>
+
+{{if not .Sessions}}
+<div class="card" style="color:#888;text-align:center;padding:40px">Сессий пока нет</div>
+{{else}}
+<div class="card" style="padding:0">
+    <table>
+        <thead>
+            <tr>
+                <th>Session UUID</th>
+                <th>Начало</th>
+                <th style="text-align:center">Точек</th>
+                <th>Последняя активность</th>
+            </tr>
+        </thead>
+        <tbody>
+        {{range .Sessions}}
+            <tr>
+                <td><a href="/admin/sessions/{{.SessionUUID}}" class="mono" style="color:#4f6ef7">{{.SessionUUID}}</a></td>
+                <td>{{.StartedAt.Format "02.01.2006 15:04:05"}}</td>
+                <td style="text-align:center">{{.PointCount}}</td>
+                <td>
+                    {{if .LastSeen}}{{.LastSeen.Format "02.01.2006 15:04:05"}}{{else}}&mdash;{{end}}
+                </td>
+            </tr>
+        {{end}}
+        </tbody>
+    </table>
+</div>
+
+{{if gt .TotalPages 1}}
+<div style="display:flex;justify-content:center;gap:8px;margin-top:16px">
+    {{if gt .Page 1}}
+    <a href="?page={{sub .Page 1}}" class="btn btn-primary btn-sm">&larr; Назад</a>
+    {{end}}
+    <span style="line-height:32px;font-size:14px;color:#666">{{.Page}} / {{.TotalPages}}</span>
+    {{if lt .Page .TotalPages}}
+    <a href="?page={{add .Page 1}}" class="btn btn-primary btn-sm">Вперёд &rarr;</a>
+    {{end}}
+</div>
+{{end}}
+{{end}}
+{{end}}

@@ -36,6 +36,7 @@ func (h *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var req model.UpdateRequest
 	if err := json.Unmarshal(rawBody, &req); err != nil {
+         	log.Printf("[ERROR] unmarshal error: %v, body: %s", err, string(rawBody))
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}

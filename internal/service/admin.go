@@ -1,26 +1,24 @@
 package service
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/lenchik-en/lbs_server/internal/domain/model"
+	"github.com/lenchik-en/lbs_server/internal/domain/port"
 )
 
 const sessionTTL = 8 * time.Hour
 
 type session struct {
 	expiresAt time.Time
-}
-
-// Settings — динамические настройки сервера, изменяемые через UI.
-type Settings struct {
-	RequireKeyLocate bool
-	RequireKeyUpdate bool
-	RefreshPeriodMs  int
 }
 
 // AdminService управляет сессиями админа и динамическими настройками.
@@ -31,16 +29,23 @@ type AdminService struct {
 	mu       sync.Mutex
 	sessions map[string]session
 
-	settingsMu sync.RWMutex
-	settings   Settings
+	settingsMu   sync.RWMutex
+	settings     model.Settings
+	settingsRepo port.SettingsRepository
 }
 
-func NewAdminService(login, passwordHash string, initial Settings) *AdminService {
+func NewAdminService(login, passwordHash string, defaults model.Settings, repo port.SettingsRepository) *AdminService {
 	svc := &AdminService{
 		login:        login,
 		passwordHash: passwordHash,
 		sessions:     make(map[string]session),
-		settings:     initial,
+		settings:     defaults,
+		settingsRepo: repo,
+	}
+	if saved, err := repo.Load(context.Background()); err != nil {
+		log.Printf("[WARN] load settings from DB: %v", err)
+	} else if saved != nil {
+		svc.settings = *saved
 	}
 	go svc.cleanupSessions()
 	return svc
@@ -87,17 +92,20 @@ func (s *AdminService) Logout(token string) {
 }
 
 // GetSettings возвращает текущие настройки.
-func (s *AdminService) GetSettings() Settings {
+func (s *AdminService) GetSettings() model.Settings {
 	s.settingsMu.RLock()
 	defer s.settingsMu.RUnlock()
 	return s.settings
 }
 
-// UpdateSettings обновляет настройки.
-func (s *AdminService) UpdateSettings(settings Settings) {
+// UpdateSettings обновляет настройки и сохраняет в БД.
+func (s *AdminService) UpdateSettings(settings model.Settings) {
 	s.settingsMu.Lock()
 	s.settings = settings
 	s.settingsMu.Unlock()
+	if err := s.settingsRepo.Save(context.Background(), settings); err != nil {
+		log.Printf("[WARN] persist settings: %v", err)
+	}
 }
 
 func (s *AdminService) cleanupSessions() {

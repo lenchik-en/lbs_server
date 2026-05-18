@@ -23,6 +23,7 @@ migrate-locate:
 	$(PSQL) "$(LOCATE_DB_URL)" -f $(MIGRATIONS_DIR)/locatedb/000003_add_coordinates_to_wifi_ip.up.sql
 	$(PSQL) "$(LOCATE_DB_URL)" -f $(MIGRATIONS_DIR)/locatedb/000004_add_unique_wifi_ip.up.sql
 	$(PSQL) "$(LOCATE_DB_URL)" -f $(MIGRATIONS_DIR)/locatedb/000005_create_api_keys.up.sql
+	$(PSQL) "$(LOCATE_DB_URL)" -f $(MIGRATIONS_DIR)/locatedb/000006_create_settings.up.sql
 	@echo "LocateDB migrations applied."
 
 migrate-update:

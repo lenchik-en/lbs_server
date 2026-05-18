@@ -21,3 +21,17 @@ func AdminAuth(svc *service.AdminService) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+// AdminAPIAuth проверяет сессионную куку. При неверной сессии возвращает 401 (для JSON API).
+func AdminAPIAuth(svc *service.AdminService) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cookie, err := r.Cookie(AdminSessionCookie)
+			if err != nil || !svc.ValidateSession(cookie.Value) {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
