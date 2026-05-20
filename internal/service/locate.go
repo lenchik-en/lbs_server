@@ -89,9 +89,8 @@ func (s *LocateService) searchBySource(ctx context.Context, req *model.LocateReq
 		return nil, fmt.Errorf("wifi: %w", err)
 	}
 
-	// WiFi подтверждает Cell?
 	if cellLoc != nil && wifiLoc != nil {
-		d := geo.HaversineDistance(cellLoc.Lat, cellLoc.Lon, wifiLoc.Lat, wifiLoc.Lon)
+		d := geo.HaversineDistance(cellLoc.Point.Lat, cellLoc.Point.Lon, wifiLoc.Point.Lat, wifiLoc.Point.Lon)
 		if d < defaultWifiMaxDistance {
 			accuracy := geo.ChordAccuracy(d, defaultCellAccuracy, defaultWifiAccuracy, defaultMinAccuracy)
 			wifiLoc.Accuracy = int(accuracy)

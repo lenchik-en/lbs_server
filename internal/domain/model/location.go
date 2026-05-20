@@ -13,8 +13,8 @@ type Point struct {
 }
 
 type Location struct {
+	Point     Point  `json:"point"`
 	Accuracy  int    `json:"accuracy"`
-	Source    Source `json:"source"`
+	Source    Source `json:"source,omitempty"`
 	FromMetro bool   `json:"-"` // внутренний флаг, не отдаётся клиенту
-	Point
 }
