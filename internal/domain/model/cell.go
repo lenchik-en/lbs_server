@@ -20,7 +20,7 @@ type GSM struct {
 
 type WCDMA struct {
 	MCC            int `json:"mcc"`
-	MNC            int `json:"MNC"`
+	MNC            int `json:"mnc"`
 	LAC            int `json:"lac"`
 	CID            int `json:"cid"`
 	SignalStrength int `json:"signal_strength"`
