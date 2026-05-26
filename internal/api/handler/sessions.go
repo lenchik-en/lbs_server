@@ -99,7 +99,7 @@ func (h *SessionsHandler) updatePoint(w http.ResponseWriter, r *http.Request, uu
 	var body struct {
 		Lat      float64 `json:"lat"`
 		Lon      float64 `json:"lon"`
-		Accuracy int     `json:"accuracy"`
+		Accuracy float64 `json:"accuracy"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)

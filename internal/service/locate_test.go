@@ -96,7 +96,7 @@ func (m *mockUpdateRepo) InsertIP(_ context.Context, _ *model.Ip, _ *model.Locat
 type mockSessionRepo struct{}
 
 func (m *mockSessionRepo) CreateIfNotExists(_ context.Context, _ string) error { return nil }
-func (m *mockSessionRepo) SavePoint(_ context.Context, _ string, _, _ float64, _ int, _ string, _, _ any) error {
+func (m *mockSessionRepo) SavePoint(_ context.Context, _ string, _, _ float64, _ float64, _ string, _, _ any) error {
 	return nil
 }
 func (m *mockSessionRepo) ListSessions(_ context.Context, _, _ int) ([]model.SessionListRow, int64, error) {
@@ -105,7 +105,7 @@ func (m *mockSessionRepo) ListSessions(_ context.Context, _, _ int) ([]model.Ses
 func (m *mockSessionRepo) GetSessionPoints(_ context.Context, _ string) ([]model.SessionPoint, error) {
 	return nil, nil
 }
-func (m *mockSessionRepo) UpdatePoint(_ context.Context, _ int64, _, _ float64, _ int) error {
+func (m *mockSessionRepo) UpdatePoint(_ context.Context, _ int64, _, _ float64, _ float64) error {
 	return nil
 }
 
@@ -140,8 +140,8 @@ func TestSearchBySource_CellOnly(t *testing.T) {
 	if err != nil || loc == nil {
 		t.Fatalf("expected location, got err=%v loc=%v", err, loc)
 	}
-	if loc.Accuracy != int(defaultCellAccuracy) {
-		t.Errorf("expected accuracy=%d, got %d", int(defaultCellAccuracy), loc.Accuracy)
+	if loc.Accuracy != float64(defaultCellAccuracy) {
+		t.Errorf("expected accuracy=%f, got %f", float64(defaultCellAccuracy), loc.Accuracy)
 	}
 }
 
@@ -172,8 +172,8 @@ func TestSearchBySource_MetroIgnoresWifi(t *testing.T) {
 	if loc.Point.Lat != 55.75 {
 		t.Errorf("expected cell lat=55.75, got %v", loc.Point.Lat)
 	}
-	if loc.Accuracy != int(defaultCellAccuracy) {
-		t.Errorf("expected accuracy=%d, got %d", int(defaultCellAccuracy), loc.Accuracy)
+	if loc.Accuracy != float64(defaultCellAccuracy) {
+		t.Errorf("expected accuracy=%f, got %f", float64(defaultCellAccuracy), loc.Accuracy)
 	}
 }
 
@@ -202,8 +202,8 @@ func TestSearchBySource_WifiConfirmsCell(t *testing.T) {
 	if loc.Point.Lat != 55.7650 {
 		t.Errorf("expected wifi lat, got %v", loc.Point.Lat)
 	}
-	if loc.Accuracy >= int(defaultCellAccuracy) {
-		t.Errorf("chord accuracy should be less than cell accuracy, got %d", loc.Accuracy)
+	if loc.Accuracy >= float64(defaultCellAccuracy) {
+		t.Errorf("chord accuracy should be less than cell accuracy, got %f", loc.Accuracy)
 	}
 }
 
@@ -232,8 +232,8 @@ func TestSearchBySource_WifiFarFromCell(t *testing.T) {
 	if loc.Point.Lat != 55.7558 {
 		t.Errorf("expected cell lat, got %v", loc.Point.Lat)
 	}
-	if loc.Accuracy != int(defaultCellAccuracy) {
-		t.Errorf("expected cell accuracy, got %d", loc.Accuracy)
+	if loc.Accuracy != float64(defaultCellAccuracy) {
+		t.Errorf("expected cell accuracy, got %f", loc.Accuracy)
 	}
 }
 
@@ -252,8 +252,8 @@ func TestSearchBySource_FallbackToIP(t *testing.T) {
 	if err != nil || loc == nil {
 		t.Fatalf("expected location: err=%v loc=%v", err, loc)
 	}
-	if loc.Accuracy != int(defaultIPAccuracy) {
-		t.Errorf("expected IP accuracy, got %d", loc.Accuracy)
+	if loc.Accuracy != float64(defaultIPAccuracy) {
+		t.Errorf("expected IP accuracy, got %f", loc.Accuracy)
 	}
 }
 

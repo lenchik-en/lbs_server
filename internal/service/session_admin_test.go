@@ -21,7 +21,7 @@ type captureSessionRepo struct {
 }
 
 func (r *captureSessionRepo) CreateIfNotExists(_ context.Context, _ string) error { return nil }
-func (r *captureSessionRepo) SavePoint(_ context.Context, _ string, _, _ float64, _ int, _ string, _, _ any) error {
+func (r *captureSessionRepo) SavePoint(_ context.Context, _ string, _, _ float64, _ float64, _ string, _, _ any) error {
 	return nil
 }
 
@@ -34,7 +34,7 @@ func (r *captureSessionRepo) ListSessions(_ context.Context, limit, offset int) 
 func (r *captureSessionRepo) GetSessionPoints(_ context.Context, _ string) ([]model.SessionPoint, error) {
 	return r.points, r.pointsErr
 }
-func (r *captureSessionRepo) UpdatePoint(_ context.Context, _ int64, _, _ float64, _ int) error {
+func (r *captureSessionRepo) UpdatePoint(_ context.Context, _ int64, _, _ float64, _ float64) error {
 	return nil
 }
 

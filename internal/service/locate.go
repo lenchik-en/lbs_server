@@ -79,7 +79,7 @@ func (s *LocateService) searchBySource(ctx context.Context, req *model.LocateReq
 
 	// Вышка из метро — WiFi игнорируем
 	if cellLoc != nil && cellLoc.FromMetro {
-		cellLoc.Accuracy = int(defaultCellAccuracy)
+		cellLoc.Accuracy = float64(defaultCellAccuracy)
 		log.Printf("[INFO] metro cell detected, skipping WiFi")
 		return cellLoc, nil
 	}
@@ -93,7 +93,7 @@ func (s *LocateService) searchBySource(ctx context.Context, req *model.LocateReq
 		d := geo.HaversineDistance(cellLoc.Point.Lat, cellLoc.Point.Lon, wifiLoc.Point.Lat, wifiLoc.Point.Lon)
 		if d < defaultWifiMaxDistance {
 			accuracy := geo.ChordAccuracy(d, defaultCellAccuracy, defaultWifiAccuracy, defaultMinAccuracy)
-			wifiLoc.Accuracy = int(accuracy)
+			wifiLoc.Accuracy = float64(accuracy)
 			log.Printf("[INFO] WiFi confirms Cell (distance=%.0fm, accuracy=%dm)", d, wifiLoc.Accuracy)
 			return wifiLoc, nil
 		}
@@ -101,11 +101,11 @@ func (s *LocateService) searchBySource(ctx context.Context, req *model.LocateReq
 	}
 
 	if cellLoc != nil {
-		cellLoc.Accuracy = int(defaultCellAccuracy)
+		cellLoc.Accuracy = float64(defaultCellAccuracy)
 		return cellLoc, nil
 	}
 	if wifiLoc != nil {
-		wifiLoc.Accuracy = int(defaultWifiAccuracy)
+		wifiLoc.Accuracy = float64(defaultWifiAccuracy)
 		return wifiLoc, nil
 	}
 
@@ -114,7 +114,7 @@ func (s *LocateService) searchBySource(ctx context.Context, req *model.LocateReq
 		return nil, fmt.Errorf("ip: %w", err)
 	}
 	if ipLoc != nil {
-		ipLoc.Accuracy = int(defaultIPAccuracy)
+		ipLoc.Accuracy = float64(defaultIPAccuracy)
 		return ipLoc, nil
 	}
 

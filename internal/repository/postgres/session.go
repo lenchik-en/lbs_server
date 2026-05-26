@@ -26,7 +26,7 @@ func (r *SessionRepo) CreateIfNotExists(ctx context.Context, sessionUUID string)
 	return err
 }
 
-func (r *SessionRepo) SavePoint(ctx context.Context, sessionUUID string, lat, lon float64, accuracy int, source string, rawReq, rawResp any) error {
+func (r *SessionRepo) SavePoint(ctx context.Context, sessionUUID string, lat, lon float64, accuracy float64, source string, rawReq, rawResp any) error {
 	reqJSON, err := json.Marshal(rawReq)
 	if err != nil {
 		return fmt.Errorf("marshal rawReq: %w", err)
@@ -97,7 +97,7 @@ func (r *SessionRepo) GetSessionPoints(ctx context.Context, sessionUUID string) 
 	return result, rows.Err()
 }
 
-func (r *SessionRepo) UpdatePoint(ctx context.Context, id int64, lat, lon float64, accuracy int) error {
+func (r *SessionRepo) UpdatePoint(ctx context.Context, id int64, lat, lon float64, accuracy float64) error {
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE session_points SET lat = $1, lon = $2, accuracy = $3 WHERE id = $4
 	`, lat, lon, accuracy, id)

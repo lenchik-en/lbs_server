@@ -46,7 +46,7 @@ func (r *trackingSessionRepo) CreateIfNotExists(_ context.Context, _ string) err
 	return r.createErr
 }
 
-func (r *trackingSessionRepo) SavePoint(_ context.Context, _ string, _, _ float64, _ int, _ string, _, _ any) error {
+func (r *trackingSessionRepo) SavePoint(_ context.Context, _ string, _, _ float64, _ float64, _ string, _, _ any) error {
 	r.saveCalled = true
 	return r.saveErr
 }
@@ -58,7 +58,7 @@ func (r *trackingSessionRepo) ListSessions(_ context.Context, _, _ int) ([]model
 func (r *trackingSessionRepo) GetSessionPoints(_ context.Context, _ string) ([]model.SessionPoint, error) {
 	return nil, nil
 }
-func (r *trackingSessionRepo) UpdatePoint(_ context.Context, _ int64, _, _ float64, _ int) error {
+func (r *trackingSessionRepo) UpdatePoint(_ context.Context, _ int64, _, _ float64, _ float64) error {
 	return nil
 }
 
@@ -131,13 +131,13 @@ func TestValidate_LonBoundaryValid(t *testing.T) {
 }
 
 func TestValidate_AccuracyInvalid(t *testing.T) {
-	for _, acc := range []int{0, -1, -100} {
+	for _, acc := range []float64{0, -1, -100} {
 		req := &model.UpdateRequest{
 			Location: &model.Location{Point: model.Point{Lat: 0, Lon: 0}, Accuracy: acc},
 			Cell:     []model.Cell{{LTE: &model.LTE{}}},
 		}
 		if err := NewUpdateService(&capturingUpdateRepo{}, &trackingSessionRepo{}).Validate(req); err == nil {
-			t.Errorf("expected error for accuracy=%d", acc)
+			t.Errorf("expected error for accuracy=%v", acc)
 		}
 	}
 }

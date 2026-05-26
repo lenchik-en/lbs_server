@@ -14,7 +14,7 @@ type SessionPoint struct {
 	Timestamp  time.Time
 	Lat        float64
 	Lon        float64
-	Accuracy   int
+	Accuracy   float64
 	Source     string
 	RawRequest []byte // JSONB из session_points.raw_request
 }

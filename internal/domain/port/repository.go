@@ -32,10 +32,10 @@ type UpdateRepository interface {
 // SessionRepository — управление сессиями и точками маршрута.
 type SessionRepository interface {
 	CreateIfNotExists(ctx context.Context, sessionUUID string) error
-	SavePoint(ctx context.Context, sessionUUID string, lat, lon float64, accuracy int, source string, rawReq, rawResp any) error
+	SavePoint(ctx context.Context, sessionUUID string, lat, lon float64, accuracy float64, source string, rawReq, rawResp any) error
 	ListSessions(ctx context.Context, limit, offset int) ([]model.SessionListRow, int64, error)
 	GetSessionPoints(ctx context.Context, sessionUUID string) ([]model.SessionPoint, error)
-	UpdatePoint(ctx context.Context, id int64, lat, lon float64, accuracy int) error
+	UpdatePoint(ctx context.Context, id int64, lat, lon float64, accuracy float64) error
 }
 
 // RefreshSource — постраничное чтение из UpdateDB для refresh.

@@ -41,7 +41,7 @@ func (s *SessionAdminService) GetPoints(ctx context.Context, sessionUUID string)
 	return points, nil
 }
 
-func (s *SessionAdminService) UpdatePoint(ctx context.Context, id int64, lat, lon float64, accuracy int) error {
+func (s *SessionAdminService) UpdatePoint(ctx context.Context, id int64, lat, lon float64, accuracy float64) error {
 	return s.repo.UpdatePoint(ctx, id, lat, lon, accuracy)
 }
 

@@ -87,8 +87,8 @@ func TestSearchBySource_WifiOnly(t *testing.T) {
 	if err != nil || loc == nil {
 		t.Fatalf("expected location for wifi-only: err=%v loc=%v", err, loc)
 	}
-	if loc.Accuracy != int(defaultWifiAccuracy) {
-		t.Errorf("expected wifi accuracy=%d, got %d", int(defaultWifiAccuracy), loc.Accuracy)
+	if loc.Accuracy != float64(defaultWifiAccuracy) {
+		t.Errorf("expected wifi accuracy=%f, got %f", float64(defaultWifiAccuracy), loc.Accuracy)
 	}
 }
 
